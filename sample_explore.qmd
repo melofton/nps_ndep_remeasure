@@ -1,0 +1,82 @@
+---
+title: "Analysis of potential sample size"
+format: pdf
+---
+
+```{r}
+library(tidyverse)
+library(dbplyr)
+library(RSQLite)
+```
+
+## Download FIA database locally
+
+Only run once.  Future - make a regular cron job to download the csv files that can be hosted on s3 (then arrow can be used to access)
+
+```{r}
+#| eval: false
+download.file("https://apps.fs.usda.gov/fia/datamart/Databases/SQLite_FIADB_ENTIRE.zip", 
+              "SQLite_FIADB_ENTIRE.zip",
+              method = "curl")
+unzip("SQLite_FIADB_ENTIRE.zip")
+```
+
+## Connect to database
+
+```{r}
+fia_all <- DBI::dbConnect(RSQLite::SQLite(), "SQLite_FIADB_ENTIRE.db")
+```
+
+## Access tree table
+
+```{r}
+trees <- tbl(fia_all, "TREE")
+```
+
+## Analyze sample size
+
+Read in the table of focal species from Mike Bell
+
+```{r}
+focal_species <- read_csv("focal_species.csv", show_col_types = FALSE)
+```
+
+Calculate the number of remeasurements for each unique tree in the database.
+
+```{r}
+focal_SPCD <- focal_species$SPCD
+tree_stats <- trees |> 
+  select(SUBP, TREE, PLOT, STATECD, SPCD, INVYR, DIA) |> 
+  filter(SPCD %in% focal_SPCD,
+         INVYR > 1995,
+         DIA > 5.0) |> 
+  mutate(id = paste(STATECD, PLOT,SUBP,TREE, sep = "-")) |> 
+  summarise(remeasures = n(), .by = c("id", "SPCD")) |> 
+  filter(remeasures > 1 & remeasures < 10) |> 
+  collect() 
+```
+
+## Remeasurements by species
+
+This shows the max number of remeasurements per tree for the different species. 
+
+```{r}
+#| fig-width: 5
+#| fig-height: 8
+tree_stats |> 
+  left_join(focal_species, by = "SPCD") |> 
+  ggplot(aes(x = remeasures)) +
+  geom_histogram() +
+  facet_wrap(~common_name, scales = "free", ncol = 2)
+```
+## Sample size by species
+
+This table is the potential sample size per species.  It is the number of trees that have been remeasured.
+
+```{r}
+tree_stats |> 
+  summarise(sample_size = n(), .by = "SPCD") |> 
+  left_join(focal_species, by = "SPCD") |> 
+  select(common_name,sample_size) |> 
+  knitr::kable()
+```
