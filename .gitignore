@@ -47,3 +47,7 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+SQLite_FIADB_ENTIRE.db
+
+.DS_Store
