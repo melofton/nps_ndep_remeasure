@@ -3,57 +3,59 @@ library(rjags)
 library(tidybayes)
 library(bayesplot)
 
-df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
+#df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
 
 #df |>
-#  filter(common_name == "black cherry") |> 
+#  dplyr::filter(common_name == "black cherry") |> 
 #  mutate(diff = Dep_N - Dep_N15,
 #         early = Dep_N15 - Dep_N) |> 
 #  ggplot(aes(x = diff)) +
 #  geom_histogram()
 #k <- 1
-sim <- "testS2"
+#sim <- "testS2"
 
-k=1
+#k=1
+
+run_model <- function(k, df, sim){
   
   tree_species <- unique(df$common_name)[k]
   
   print(tree_species)
   
   live_tree_ids <- df |> 
-    filter(common_name == tree_species) |> 
+    dplyr::filter(common_name == tree_species) |> 
     summarise(count = n(),
               sum = sum(live_m2), .by = tree_ID) |> 
-    filter(count >= sum) |> 
+    dplyr::filter(count >= sum) |> 
     pull(tree_ID)
   
   focal_data <- df |> 
-    filter(tree_ID %in% live_tree_ids) |> 
+    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     group_by(tree_ID) |> 
     tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
     ungroup()
   
   trees_index <- focal_data |> 
-    filter(common_name == tree_species) |> 
+    dplyr::filter(common_name == tree_species) |> 
     distinct(tree_ID) |> 
-    filter(tree_ID %in% live_tree_ids) |> 
+    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     mutate(tree_index = 1:n())
   
   plots <- focal_data |> 
-    filter(common_name == tree_species) |> 
-    filter(tree_ID %in% live_tree_ids) |> 
+    dplyr::filter(common_name == tree_species) |> 
+    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     distinct(plot_ID) |> 
     mutate(plot_index = 1:n())
   
   tree_measures <- focal_data |> 
-    filter(common_name == tree_species) |> 
-    filter(tree_ID %in% live_tree_ids) |> 
+    dplyr::filter(common_name == tree_species) |> 
+    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     group_by(tree_ID) |> 
     summarise(count = n())
   
   tree_info <- focal_data |> 
-    filter(common_name == tree_species) |> 
-    filter(tree_ID %in% live_tree_ids) |> 
+    dplyr::filter(common_name == tree_species) |> 
+    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     distinct(tree_ID, plot_ID) |> 
     left_join(plots, by = join_by(plot_ID)) |> 
     left_join(tree_measures, by = join_by(tree_ID)) |> 
@@ -73,13 +75,13 @@ k=1
   
   for(i in 1:nrow(tree_info)){
     measures <- tree_info |> 
-      filter(tree_ID == tree_info$tree_ID[i]) |> 
+      dplyr::filter(tree_ID == tree_info$tree_ID[i]) |> 
       pull(count)
     
     n_measures[i] <- measures
     
     curr_tree <- df1 |> 
-      filter(tree_ID == tree_info$tree_ID[i])
+      dplyr::filter(tree_ID == tree_info$tree_ID[i])
     
     if(measures > 1){
       for(j in 2:(measures)){
@@ -98,20 +100,14 @@ k=1
     }
   }
   
-  example_tree_matrix <- tree_matrix[!is.na(tree_matrix[,4]),]
-  example_n_measures <- n_measures[!is.na(tree_matrix[,4])]
-  example_ba_gt <- ba_gt[!is.na(tree_matrix[,4]),]
-  example_dt <- dt[!is.na(tree_matrix[,4]),]
-  example_ndep <- ndep[!is.na(tree_matrix[,4]),]
-  
-  ssData   <- list(tree_agb_obs = example_tree_matrix, 
-                   ntrees = nrow(example_tree_matrix), 
-                   n_measures = example_n_measures,
-                   ba_gt = example_ba_gt,
-                   dt = example_dt,
-                   ndep = example_ndep,
-                   max_ndep = max(c(example_ndep), na.rm = TRUE),
-                   min_ndep = min(c(example_ndep), na.rm = TRUE),
+  ssData   <- list(tree_agb_obs = tree_matrix, 
+                   ntrees = nrow(tree_matrix), 
+                   n_measures = n_measures,
+                   ba_gt = ba_gt,
+                   dt = dt,
+                   ndep = ndep,
+                   max_ndep = max(c(ndep), na.rm = TRUE),
+                   min_ndep = min(c(ndep), na.rm = TRUE),
                    #temp = temp,
                    #max_temp = max(c(temp), na.rm = TRUE),
                    #min_temp = min(c(temp), na.rm = TRUE),
@@ -176,8 +172,8 @@ k=1
   procErr ~ dunif(0.0001,10)
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) #Sample in log space
-  p4 ~ dunif(min_ndep*0.5, max_ndep*2)
-  p5 ~ dunif(0.3, 20)  
+  p4 ~ dunif(min_ndep*0.5, max_ndep*2) # may need to tweak
+  p5 ~ dunif(0.3, 20)  # wide enough to give different shapes; may need to tweak
   #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
   #p5inv2 ~ dexp(0.001)  
   #p6 ~ dunif(min_temp*0.5, max_temp*2)
@@ -220,24 +216,24 @@ k=1
                      "procErr" = 0.001,
                      "p2" = 0.6,
                      "p3" = 1,
-                     "p4" = max(c(example_ndep), na.rm = TRUE), 
+                     "p4" = max(c(ndep), na.rm = TRUE), 
                      "p5" = 1.3),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p4" = 2 * min(c(example_ndep), na.rm = TRUE), 
+                     "p4" = 2 * min(c(ndep), na.rm = TRUE), 
                      "p5" = 2),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p4" = 0.5 * max(c(example_ndep), na.rm = TRUE), 
+                     "p4" = 0.5 * max(c(ndep), na.rm = TRUE), 
                      "p5" = 5))
   
-  ssFit    <- jags.model(data=ssData, file=paste0(sim,"stateSpaceModel-",k,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
+  ssFit    <- jags.model(data=ssData, file=paste0(sim,"-stateSpaceModel-",k,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
   parNames <- c("tree_effect", 
                 "p2", 
                 "p3", 
@@ -272,15 +268,15 @@ k=1
   n_samples <- 1000
   samples <- sample(nrow(mcmc), n_samples, replace = FALSE)
   
-  max_ndep = max(c(example_ndep), na.rm = TRUE)
-  min_ndep = min(c(example_ndep), na.rm = TRUE)
+  max_ndep = max(c(ndep), na.rm = TRUE)
+  min_ndep = min(c(ndep), na.rm = TRUE)
   
   ndep_pred <- seq(min_ndep, max_ndep, length.out = 100)
   
   pred_post <- NULL
   
   mcmc_burned <- mcmc |> 
-    filter(.iteration > 1000)
+    dplyr::filter(.iteration > 1000)
   
   for(i in 1:length(samples)){
     
@@ -328,8 +324,5 @@ k=1
   
   ggsave(filename = paste0(sim, "-", k,"-",tree_species,"-pairs.pdf"), plot = p, device = "pdf", height = 12, width = 12)
   
-  
-future::plan("future::multisession", workers = 4)
 
-total_species <- length(unique(df$common_name))
-furrr::future_walk(1:total_species, run_species, df, sim)
+}
