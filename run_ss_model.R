@@ -14,7 +14,7 @@ df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types
 
 total_species <- length(unique(df$common_name))
 
-sim <- "testS2"
+sim <- "test-plot-effect"
 
 source("./ss_modeling_example.R")
 
