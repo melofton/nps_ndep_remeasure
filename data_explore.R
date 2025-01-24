@@ -11,7 +11,6 @@ library(tidyverse)
 # load data
 df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
 colnames(df)
-dict <- read_csv("./")
 
 # how many trees per plot for each species?
 unique(df$common_name)
@@ -23,7 +22,7 @@ df1 <- df %>%
 num_per_plot_fig <- df1 %>%
   ggplot(aes(x = num_per_plot, group = common_name)) +
   geom_histogram() +
-  facet_wrap(facets = vars(common_name)) + 
+  facet_wrap(facets = vars(common_name), scales = "free_y") + 
   theme_bw()
 num_per_plot_fig
 
@@ -58,7 +57,7 @@ df2 <- df %>%
 num_intervals_fig <- df2 %>%
   ggplot(aes(x = num_intervals, group = common_name)) +
   geom_histogram() +
-  facet_wrap(facets = vars(common_name)) + 
+  facet_wrap(facets = vars(common_name), scales = "free_y") + 
   theme_bw()
 num_intervals_fig
 
@@ -70,23 +69,23 @@ inc_dec <- df2 %>%
          interval_2 = `2`,
          interval_3 = `3`,
          interval_4 = `4`) %>%
-  mutate(inc_1_2 = ifelse(interval_2 - interval_1 >= 0,"yes","no"),
-         inc_2_3 = ifelse(interval_3 - interval_2 >= 0,"yes","no"),
-         inc_3_4 = ifelse(interval_4 - interval_3 >= 0,"yes","no")) %>%
+  mutate(inc_1_2 = interval_2 - interval_1,
+         inc_2_3 = interval_3 - interval_2,
+         inc_3_4 = interval_4 - interval_3) %>%
   select(-interval_1, -interval_2, -interval_3, -interval_4) %>%
   pivot_longer(inc_1_2:inc_3_4, names_to = "interval_span",
-               values_to = "inc_observed") %>%
-  filter(!is.na(inc_observed)) %>%
-  group_by(tree_ID) %>%
-  mutate(Ndep_pattern = ifelse("yes" %in% inc_observed & "no" %in% inc_observed,"both",
-                               ifelse("yes" %in% inc_observed,"increase",
-                                      ifelse("no" %in% inc_observed, "decrease",NA)))) %>%
-  select(-inc_observed, -interval_span) %>%
-  distinct()
+               values_to = "delta_ndep") %>%
+  filter(!is.na(delta_ndep)) %>%
+  ungroup()
+
+min <- inc_dec %>% filter(delta_ndep == min(delta_ndep))
+max <- inc_dec %>% filter(delta_ndep == max(delta_ndep))
 
 inc_dec_fig <- inc_dec %>%
-  ggplot(aes(x = Ndep_pattern, group = common_name)) +
-  geom_bar(stat = "count") +
-  facet_wrap(facets = vars(common_name)) + 
+  ggplot(aes(x = delta_ndep, group = common_name)) +
+  geom_density(color = "black", fill = "white") +
+  geom_vline(xintercept = 0, color = "blue") +
+  xlim(c(-5,5)) +
+  facet_wrap(facets = vars(common_name), scales = "free_y") + 
   theme_bw()
 inc_dec_fig

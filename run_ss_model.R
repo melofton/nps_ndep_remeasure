@@ -10,13 +10,14 @@ library(tidybayes)
 library(bayesplot)
 library(furrr)
 
-df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
+df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
+  filter(!common_name %in% c("Douglas-fir","western hemlock"))
 
 total_species <- length(unique(df$common_name))
 
-sim <- "test-plot-effect"
+sim <- "test-plot-effect-only"
 
-source("./ss_modeling_example.R")
+source("./ss_modeling_plotEffectOnly.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
@@ -25,4 +26,4 @@ source("./ss_modeling_example.R")
 future::plan("future::multisession", workers = 4) # workers is cores
 
 total_species <- length(unique(df$common_name))
-furrr::future_walk(8:total_species, run_model, df, sim)
+furrr::future_walk(1:total_species, run_model, df, sim)

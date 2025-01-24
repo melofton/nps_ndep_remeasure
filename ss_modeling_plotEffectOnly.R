@@ -136,7 +136,7 @@ run_model <- function(k, df, sim){
 
   global_tree_effect ~ dunif(-10,10)
   tau_global ~ dunif(0.0001,10)
-  tau_plot ~ dunif(0.0001,10)
+  #tau_plot ~ dunif(0.0001,10)
   procErr ~ dunif(0.0001,10)
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) #Sample in log space
@@ -163,10 +163,10 @@ run_model <- function(k, df, sim){
   for(n in 1:ntrees){
 
     # tree_effect[n] ~ dnorm(global_tree_effect, tau_global)
-    tree_effect[n] ~ dnorm(plot_effect[plot_index[n]], tau_plot)
+    # tree_effect[n] ~ dnorm(plot_effect[plot_index[n]], tau_plot)
 
     for(t in 2:n_measures[n]){
-      tree_agb_mean[n, t] <-  tree_agb_latent[n, t-1] +  dt[n,t] * (tree_effect[n] * tree_agb_latent[n, t-1] ^ p2) 
+      tree_agb_mean[n, t] <-  tree_agb_latent[n, t-1] +  dt[n,t] * (plot_effect[plot_index[n]] * tree_agb_latent[n, t-1] ^ p2) 
         * exp(-ba_gt[n,t]*p3)  
         * exp(-0.5 * (log(ndep[n,t] / p4)/ p5) ^ 2)  
         #* exp(-p5inv2 * log(ndep[n,t] - lp4))  
@@ -194,7 +194,7 @@ run_model <- function(k, df, sim){
   
   inits <- list(list("global_tree_effect" = 1,
                      "tau_global" = 1,
-                     "tau_plot" = 1,
+                     #"tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.6,
                      "p3" = 1,
@@ -202,7 +202,7 @@ run_model <- function(k, df, sim){
                      "p5" = 1.3),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
-                     "tau_plot" = 1,
+                     #"tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
@@ -210,7 +210,7 @@ run_model <- function(k, df, sim){
                      "p5" = 2),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
-                     "tau_plot" = 1,
+                     #"tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
@@ -218,7 +218,7 @@ run_model <- function(k, df, sim){
                      "p5" = 5))
   
   ssFit    <- jags.model(data=ssData, file=paste0(sim,"-stateSpaceModel-",k,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
-  parNames <- c("tree_effect", 
+  parNames <- c(#"tree_effect", 
                 "p2", 
                 "p3", 
                 "p4", "p5",
@@ -232,9 +232,9 @@ run_model <- function(k, df, sim){
                        p3, 
                        p4,p5,
                        procErr, 
-                       `tree_effect[1]`,
-                       `tree_effect[51]`,
-                       `tree_effect[99]`,
+                       #`tree_effect[1]`,
+                       #`tree_effect[51]`,
+                       #`tree_effect[99]`,
                        global_tree_effect,
                        `plot_effect[1]`,
                        `plot_effect[10]`,
