@@ -12,7 +12,7 @@ library(bayesplot)
 #  ggplot(aes(x = diff)) +
 #  geom_histogram()
 #k <- 1
-#sim <- "testS2"
+#sim <- "plot-effect-only"
 
 #k=1
 
