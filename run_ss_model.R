@@ -15,9 +15,9 @@ df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types
 
 total_species <- length(unique(df$common_name))
 
-sim <- "test-plot-effect-only"
+sim <- "linear-model"
 
-source("./ss_modeling_plotEffectOnly.R")
+source("./ss_modeling_linearModel.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
