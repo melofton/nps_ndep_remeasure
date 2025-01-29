@@ -89,3 +89,48 @@ inc_dec_fig <- inc_dec %>%
   facet_wrap(facets = vars(common_name), scales = "free_y") + 
   theme_bw()
 inc_dec_fig
+
+baseline_Ndep <- df %>%
+  select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, date_m2, date_m1) %>%
+  filter(interval_no == 1) %>%
+  mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
+  mutate(total_years = 15 + dt) %>%
+  mutate(Dep_Nbaseline = (Dep_N15*total_years - Dep_N*dt) / 15) %>%
+  select(tree_ID, Dep_Nbaseline)
+hist(baseline_Ndep$Dep_Nbaseline)
+
+delta_Ndep <- df %>%
+  select(common_name, tree_ID, interval_no, Dep_N) %>%
+  left_join(baseline_Ndep, by = "tree_ID") %>%
+  mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline) %>%
+  filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+
+plot_delta_Ndep <- ggplot(data = delta_Ndep, aes(x = Dep_Ndelta,
+                                                 group = interval_no, fill = as.factor(interval_no)))+
+  geom_density()+
+  facet_wrap(facets = vars(common_name), scales = "free_y")+
+  xlim(c(-15,15))+
+  geom_vline(xintercept = 0)+
+  theme_bw()
+plot_delta_Ndep  
+
+check_intervals <- df %>%
+  select(interval_no, date_m1, date_m2) %>%
+  pivot_longer(date_m1:date_m2, names_to = "m1_m2", values_to = "datetime")
+
+plot_interval_times <- ggplot(data = check_intervals, 
+                              aes(x = datetime, group = m1_m2,
+                                  fill = m1_m2))+
+  geom_histogram()+
+  facet_wrap(facets = vars(interval_no))+
+  theme_bw()
+plot_interval_times
+
+int4_trees <- df %>%
+  group_by(common_name, tree_ID) %>%
+  summarise(count = n()) %>%
+  filter(count == 4) %>%
+  group_by(common_name) %>%
+  summarise(num_int4_trees = n())
+
+

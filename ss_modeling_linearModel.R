@@ -27,13 +27,13 @@ run_model <- function(k, df, sim){
     summarise(count = n(),
               sum = sum(live_m2), .by = tree_ID) |> 
     dplyr::filter(count >= sum) |> 
-    pull(tree_ID)
+    pull(tree_ID) 
   
   focal_data <- df |> 
     dplyr::filter(tree_ID %in% live_tree_ids) |> 
     group_by(tree_ID) |> 
     tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
-    ungroup()
+    ungroup() 
   
   trees_index <- focal_data |> 
     dplyr::filter(common_name == tree_species) |> 
@@ -65,7 +65,7 @@ run_model <- function(k, df, sim){
   
   df1 <- focal_data |> 
     mutate(dt = as.numeric(date_m2 - date_m1)/365) |> 
-    select(AG_carbon_pYear, tree_ID, dt, Dep_N, subp_BA_GT_m1, MAT, MAP, Dep_S)
+    select(AG_carbon_m1, AG_carbon_m2, tree_ID, dt, Dep_N, subp_BA_GT_m1, MAT, MAP, Dep_S)
   
   tree_matrix <- matrix(NA, nrow(tree_info), max_measures)
   n_measures <- rep(NA, nrow(tree_info))
@@ -93,26 +93,34 @@ run_model <- function(k, df, sim){
     curr_tree <- df1 |> 
       dplyr::filter(tree_ID == tree_info$tree_ID[i])
     
-      for(j in 1:(measures)){
-        tree_matrix[i, j] <-  curr_tree$AG_carbon_pYear[j]
+    if(measures > 1){
+      for(j in 2:(measures)){
+        tree_matrix[i, j-1] <-  curr_tree$AG_carbon_m1[j]
+        tree_matrix[i, j] <-  curr_tree$AG_carbon_m2[j]
         dt[i,j] <- curr_tree$dt[j]
         ba_gt[i, j] <- curr_tree$subp_BA_GT_m1[j] 
         ndep[i, j] <- curr_tree$Dep_N[j] 
       }
+    }else{
+      tree_matrix[i, 1] <-  curr_tree$AG_carbon_m1[1]
+      tree_matrix[i, 2] <-  curr_tree$AG_carbon_m2[1]
+      dt[i,2] <- curr_tree$dt[1]
+      ba_gt[i, 2] <- curr_tree$subp_BA_GT_m1[1] 
+      ndep[i, 2] <- curr_tree$Dep_N[1] 
+    }
   }
-    
   
   # ADD N_PLOTS AND PLOT_INDEX AS DATA VARIABLES
   ssData   <- list(tree_agb_obs = tree_matrix, 
                    ntrees = nrow(tree_matrix), 
                    n_plots = length(unique(tree_info$plot_index)),
                    n_measures = n_measures,
-                   ba_gt = ba_gt,
+                   #ba_gt = ba_gt,
                    dt = dt,
                    ndep = ndep,
                    plot_index = plot_index,
-                   max_ndep = max(c(ndep), na.rm = TRUE),
-                   min_ndep = min(c(ndep), na.rm = TRUE),
+                   #max_ndep = max(c(ndep), na.rm = TRUE),
+                   #min_ndep = min(c(ndep), na.rm = TRUE),
                    #temp = temp,
                    #max_temp = max(c(temp), na.rm = TRUE),
                    #min_temp = min(c(temp), na.rm = TRUE),
@@ -130,10 +138,12 @@ run_model <- function(k, df, sim){
   tau_global ~ dunif(0.0001,10)
   tau_plot ~ dunif(0.0001,10)
   procErr ~ dunif(0.0001,10)
-  p2 ~ dunif(0,2) 
-  p3 ~ dunif(0,100) #Sample in log space
-  p4 ~ dunif(min_ndep*0.5, max_ndep*2)#; NEED TO VECTORIZE THIS TO N=3 FOR DIFFERENT STATUSES
-  p5 ~ dunif(0.3, 20) # ; ALSO VECTORIZE THIS
+  a1 ~ dnorm(0, 0.001)
+  a2 ~ dnorm(0, 0.001)
+  #p2 ~ dunif(0,2) 
+  #p3 ~ dunif(0,100) #Sample in log space
+  #p4 ~ dunif(min_ndep*0.5, max_ndep*2)#; NEED TO VECTORIZE THIS TO N=3 FOR DIFFERENT STATUSES
+  #p5 ~ dunif(0.3, 20) # ; ALSO VECTORIZE THIS
   #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
   #p5inv2 ~ dexp(0.001)  
   #p6 ~ dunif(min_temp*0.5, max_temp*2)
@@ -158,9 +168,8 @@ run_model <- function(k, df, sim){
     tree_effect[n] ~ dnorm(plot_effect[plot_index[n]], tau_plot)
 
     for(t in 2:n_measures[n]){
-      tree_agb_mean[n, t] <-  tree_agb_latent[n, t-1] +  dt[n,t] * (tree_effect[n] * tree_agb_latent[n, t-1] ^ p2) 
-        * exp(-ba_gt[n,t]*p3)  
-        * exp(-0.5 * (log(ndep[n,t] / p4)/ p5) ^ 2)  
+      tree_agb_mean[n, t] <-  dt[n,t] * (a1 + (tree_effect[n] * tree_agb_latent[n, t-1]) 
+        + (a2 * ndep[n,t]) ) 
         #* exp(-p5inv2 * log(ndep[n,t] - lp4))  
         #* exp(-0.5 * (log(temp[n,t] / p6)/ p7) ^ 2)
         #* exp(-0.5 * (log(sdep[n,t] / p10)/ p11) ^ 2)
@@ -188,41 +197,44 @@ run_model <- function(k, df, sim){
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
-                     "p2" = 0.6,
-                     "p3" = 1,
-                     "p4" = max(c(ndep), na.rm = TRUE), 
-                     "p5" = 1.3),
+                     "a1" = 0.5,
+                     "a2" = 0.5),
+                     # "p2" = 0.6,
+                     # "p3" = 1,
+                     # "p4" = max(c(ndep), na.rm = TRUE), 
+                     # "p5" = 1.3),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
-                     "p2" = 0.4,
-                     "p3" = 1,
-                     "p4" = 2 * min(c(ndep), na.rm = TRUE), 
-                     "p5" = 2),
+                     "a1" = 0,
+                     "a2" = 0),
+                     # "p2" = 0.4,
+                     # "p3" = 1,
+                     # "p4" = 2 * min(c(ndep), na.rm = TRUE), 
+                     # "p5" = 2),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
-                     "p2" = 0.4,
-                     "p3" = 1,
-                     "p4" = 0.5 * max(c(ndep), na.rm = TRUE), 
-                     "p5" = 5))
+                     "a1" = -0.5,
+                     "a2" = -0.5))
+                     # "p2" = 0.4,
+                     # "p3" = 1,
+                     # "p4" = 0.5 * max(c(ndep), na.rm = TRUE), 
+                     # "p5" = 5))
   
   ssFit    <- jags.model(data=ssData, file=paste0(sim,"-stateSpaceModel-",k,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
   parNames <- c("tree_effect", 
-                "p2", 
-                "p3", 
-                "p4", "p5",
+                "a1","a2",
                 "procErr", 
                 "global_tree_effect",
                 "plot_effect")
   
   ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=15000, thin = 5)
   mcmc <- spread_draws(ssFit,
-                       p2, 
-                       p3, 
-                       p4,p5,
+                       a1,
+                       a2,
                        procErr, 
                        `tree_effect[1]`,
                        `tree_effect[51]`,
@@ -263,7 +275,8 @@ run_model <- function(k, df, sim){
     curr_ndep <- tibble(sample = i,
                         variable = "ndep (kg N/m2/yr)",
                         value = ndep_pred,
-                        pred = exp(-0.5 * (log(ndep_pred / mcmc_burned$p4[samples[i]])/ mcmc_burned$p5[samples[i]]) ^ 2),
+                        pred = mcmc_burned$a2[samples[i]] * ndep_pred,
+                        #pred = exp(-0.5 * (log(ndep_pred / mcmc_burned$p4[samples[i]])/ mcmc_burned$p5[samples[i]]) ^ 2),
                         type = "posterier")
     
     pred_post <- bind_rows(pred_post, curr_ndep)
@@ -272,13 +285,12 @@ run_model <- function(k, df, sim){
   pred_prior <- NULL
   
   for(i in 1:1000){
-    p4 <- runif(1, min_ndep*0.5, max_ndep*2)
-    p5 <- runif(1, 0.3, 20) 
-    
+    a2 <- rnorm(1, 0, 1/sqrt(0.001))
+
     curr_ndep <- tibble(sample = i,
                         variable = "ndep (kg N/m2/yr)",
                         value = ndep_pred,
-                        pred = exp(-0.5 * (log(ndep_pred / p4)/ p5) ^ 2),
+                        pred = a2 * ndep_pred,
                         type = "prior")
     
     pred_prior <- bind_rows(pred_prior, curr_ndep)
@@ -297,7 +309,7 @@ run_model <- function(k, df, sim){
   p <- mcmc_burned |> 
     rename(chain = .chain,
            iteration = .iteration) |> 
-    select(chain:p5) |> 
+    select(chain:a2) |> 
     select(-.draw, -iteration) |> 
     mcmc_pairs()
   
