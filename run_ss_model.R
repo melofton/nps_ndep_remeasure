@@ -11,14 +11,13 @@ library(bayesplot)
 library(furrr)
 
 df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
-  filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
-  filter(!interval_no == 4)
+  filter(!common_name %in% c("Douglas-fir","western hemlock")) 
 
 total_species <- length(unique(df$common_name))
 
-sim <- "no-interval-4"
+sim <- "growth-model"
 
-source("./ss_modeling_linearModel.R")
+source("./growth_modeling_individualAndPlotEffect.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
