@@ -33,7 +33,7 @@ run_model <- function(k, df, sim){
     dplyr::filter(tree_ID %in% live_tree_ids) |> 
     group_by(tree_ID) |> 
     tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
-    dplyr::filter(!is.na(subp_BA_GT_m1)) |>
+    dplyr::filter(!is.na(subp_BA_GT_m1) & !is.na(Dep_N)) |>
     ungroup()
   
   trees_index <- focal_data |> 
@@ -53,8 +53,7 @@ run_model <- function(k, df, sim){
     select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, subp_BA_GT_m1, MAT, MAP, Dep_S) |>
     dplyr::filter(tree_ID %in% live_tree_ids) |>
     left_join(plots, by = join_by(plot_ID)) |> 
-    left_join(trees_index, by = join_by(tree_ID)) %>%
-    dplyr::filter(!is.na(Dep_N))
+    left_join(trees_index, by = join_by(tree_ID)) 
   
   mean_annual_avg_growth <- df1$AG_carbon_pYear
   start_measures <- df1$AG_carbon_m1
