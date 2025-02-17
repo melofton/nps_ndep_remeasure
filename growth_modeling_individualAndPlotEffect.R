@@ -96,7 +96,7 @@ run_model <- function(k, df, sim){
   procErr ~ dunif(0.0001,10)
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) #Sample in log space
-  p4 ~ dunif(min_ndep*0.5, max_ndep*2)#; NEED TO VECTORIZE THIS TO N=3 FOR DIFFERENT STATUSES
+  p4 ~ dunif(-1000, 1000)#; NEED TO VECTORIZE THIS TO N=3 FOR DIFFERENT STATUSES
   p5 ~ dunif(0.3, 20) # ; ALSO VECTORIZE THIS
   #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
   #p5inv2 ~ dexp(0.001)  
