@@ -11,11 +11,11 @@ library(bayesplot)
 library(furrr)
 
 df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
-  filter(common_name %in% c("ponderosa pine")) 
+  filter(common_name %in% c("red spruce")) 
 
 total_species <- length(unique(df$common_name))
 
-sim <- "growth-model"
+sim <- "checking-merge"
 
 source("./growth_modeling_individualAndPlotEffect.R")
 
