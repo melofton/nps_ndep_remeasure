@@ -14,8 +14,6 @@
 
 ## Guide to experiments, listed in chronological order of when they were performed: 
 
-Note that not all model output for early experiments (*individual_effect*,*plot_effect*,*individual_and_plot_effect*,*model_growth_directly*) was retained; however, all experiments are recorded here and visualizations from early experiments can be found in the Google Slides for research updates on this project.
-
 **individual_effect**: state-space model with individual tree effect only
 
 **plot_effect**: state-space model with plot effect only
