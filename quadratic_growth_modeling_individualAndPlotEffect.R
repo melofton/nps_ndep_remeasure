@@ -135,8 +135,8 @@ run_model <- function(k, df, sim){
                      "procErr" = 0.001,
                      "p2" = 0.6,
                      "p3" = 1,
-                     "p4" = 0.5, 
-                     "p5" = 0.5),
+                     "p4" = 0.1, 
+                     "p5" = 0.1),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
@@ -151,8 +151,8 @@ run_model <- function(k, df, sim){
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p4" = -0.5, 
-                     "p5" = -0.5))
+                     "p4" = -0.1, 
+                     "p5" = -0.1))
   
   ssFit    <- jags.model(data=ssData, file=paste0(sim,"-growthModel-",tree_species,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
   parNames <- c("tree_effect", 
@@ -163,7 +163,7 @@ run_model <- function(k, df, sim){
                 "global_tree_effect",
                 "plot_effect")
   
-  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=15000, thin = 5)
+  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=30000, thin = 5)
   mcmc <- spread_draws(ssFit,
                        p2, 
                        p3, 

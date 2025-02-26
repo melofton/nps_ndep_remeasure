@@ -202,7 +202,7 @@ run_model <- function(k, df, sim){
   p <- mcmc_burned |> 
     rename(chain = .chain,
            iteration = .iteration) |> 
-    select(chain:p5) |> 
+    select(chain:p4) |> 
     select(-.draw, -iteration) |> 
     mcmc_pairs()
   

@@ -15,9 +15,9 @@ df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types
 
 total_species <- length(unique(df$common_name))
 
-sim <- "ponderosa-pine"
+sim <- "quadratic"
 
-source("./growth_modeling_individualAndPlotEffect.R")
+source("./quadratic_growth_modeling_individualAndPlotEffect.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
