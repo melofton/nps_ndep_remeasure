@@ -24,7 +24,7 @@
 
 **broader_p4_prior**: modeling growth directly (not a state space model) with both individual and plot effects and a broader p4 prior (dunif(-1000,1000)) to avoid constraining the lognormal curve
 
-**linear_model**: modeling growth directly with a linear rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect intercept
+**linear_model**: modeling growth directly with a linear rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect
 
-**quadratic_model**: modeling growth directly with a quadratic rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect intercept
+**quadratic_model**: modeling growth directly with a quadratic rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect 
 
