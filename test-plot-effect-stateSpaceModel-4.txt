@@ -1,0 +1,59 @@
+model {
+
+  global_tree_effect ~ dunif(-10,10)
+  tau_global ~ dunif(0.0001,10)
+  tau_plot ~ dunif(0.0001,10)
+  procErr ~ dunif(0.0001,10)
+  p2 ~ dunif(0,2) 
+  p3 ~ dunif(0,100) #Sample in log space
+  p4 ~ dunif(min_ndep*0.5, max_ndep*2)#; NEED TO VECTORIZE THIS TO N=3 FOR DIFFERENT STATUSES
+  p5 ~ dunif(0.3, 20) # ; ALSO VECTORIZE THIS
+  #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
+  #p5inv2 ~ dexp(0.001)  
+  #p6 ~ dunif(min_temp*0.5, max_temp*2)
+  #p7 ~ dunif(0.3, 20)  
+  #p8 ~ dunif(min_precip*0.5, max_precip*2)
+  #p9 ~ dunif(0.3, 20)   
+  #p10 ~ dunif(min_sdep*0.5, max_sdep*2)
+  #p10 ~ dunif(min_sdep, max_sdep*2)
+  #p11 ~ dunif(0.3, 10)    
+  
+  for(n in 1:ntrees){
+    tree_agb_latent[n,1] ~ dnorm(tree_agb_obs[n, 1], obsErr)
+  }
+  
+  for(p in 1:n_plots){
+    plot_effect[p] ~ dnorm(global_tree_effect, tau_global)
+  }
+
+  for(n in 1:ntrees){
+
+    # tree_effect[n] ~ dnorm(global_tree_effect, tau_global)
+    tree_effect[n] ~ dnorm(plot_effect[plot_index[n]], tau_plot)
+
+    for(t in 2:n_measures[n]){
+      tree_agb_mean[n, t] <-  tree_agb_latent[n, t-1] +  dt[n,t] * (tree_effect[n] * tree_agb_latent[n, t-1] ^ p2) 
+        * exp(-ba_gt[n,t]*p3)  
+        * exp(-0.5 * (log(ndep[n,t] / p4)/ p5) ^ 2)  
+        #* exp(-p5inv2 * log(ndep[n,t] - lp4))  
+        #* exp(-0.5 * (log(temp[n,t] / p6)/ p7) ^ 2)
+        #* exp(-0.5 * (log(sdep[n,t] / p10)/ p11) ^ 2)
+        #* 1/ (1 + ((sdep[n,t]-min_sdep)/p10)^p11)
+        #* exp(-0.5 * (log(precip[n,t] / p8)/ p9) ^ 2)
+        #* 
+        #* ADDING IN DRAFT FIXED EFFECT FOR N DEP DELTA
+        #* tree_agb_mean[n, t] <-  tree_agb_latent[n, t-1] +  dt[n,t] * (tree_effect[n] * tree_agb_latent[n, t-1] ^ p2) 
+        #* * exp(-ba_gt[n,t]*p3)  
+        #* * exp(-0.5 * (log(ndep[n,t] / p4[nstatus[n]])/ p5[nstatus[n]]) ^ 2) 
+        #* 
+        #* DRAFT CONTINUOUS EFFECT FOR N DEP DELTA
+        #*  tree_agb_mean[n, t] <-  tree_agb_latent[n, t-1] +  dt[n,t] * (tree_effect[n] * tree_agb_latent[n, t-1] ^ p2) 
+        #* * exp(-ba_gt[n,t]*p3)  
+        #* * exp(-0.5 * (log(ndep[n,t] / (p4 + x1 * delta_Ndep[n,t]))/ (p5 + x2 * delta_Ndep[n,t])) ^ 2)  
+        
+      tree_agb_latent[n,t] ~ dnorm(tree_agb_mean[n, t], procErr/dt[n,t])
+      tree_agb_obs[n,t] ~ dnorm(tree_agb_latent[n,t], obsErr)
+    }
+  }
+
+  }  
