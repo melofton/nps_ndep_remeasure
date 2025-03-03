@@ -6,6 +6,7 @@
 library(tidyverse)
 library(lubridate)
 library(arrow)
+library(ggpubr)
 
 # list files
 out <- list.files("./experiments/delta_Ndep",pattern = ".parquet",
@@ -55,4 +56,8 @@ Ndep_param_sum
 
 compare_pred_vs_obs <- pred_vs_obs(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
                                     model_output_folder = "./experiments/delta_Ndep")
-compare_pred_vs_obs$plot2  
+compare_pred_vs_obs$plot2 
+
+# growth vs size
+growth_vs_size(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
+            model_output_folder = "./experiments/delta_Ndep")
