@@ -61,3 +61,11 @@ compare_pred_vs_obs$plot2
 # growth vs size
 growth_vs_size(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
             model_output_folder = "./experiments/delta_Ndep")
+
+# growth vs Ndep
+growth_vs_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
+               model_output_folder = "./experiments/delta_Ndep")
+
+# delta growth vs delta Ndep
+delta_growth_vs_delta_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
+               model_output_folder = "./experiments/delta_Ndep")

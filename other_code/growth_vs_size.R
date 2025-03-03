@@ -9,7 +9,7 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
   
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
-  out <- list.files("./experiments/delta_Ndep",pattern = ".parquet",
+  out <- list.files(model_output_folder,pattern = ".parquet",
                     full.names = TRUE)
   
   for(i in 1:length(out)){
