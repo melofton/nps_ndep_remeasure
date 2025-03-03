@@ -38,7 +38,7 @@ ggplot(data = final)+
                alpha = 0.5)+
   theme_classic()
 
-param_sum <- final %>%
+Ndep_param_sum <- final %>%
   select(model_id, p4, p5) %>%
   pivot_longer(p4:p5,names_to = "param", values_to = "param_value") %>%
   group_by(model_id, param) %>%
@@ -49,4 +49,10 @@ param_sum <- final %>%
   theme_bw()+
   geom_vline(xintercept = 0)+
   geom_hline(yintercept = 0)
-param_sum
+Ndep_param_sum
+
+# compare obs vs pred
+
+compare_pred_vs_obs <- pred_vs_obs(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
+                                    model_output_folder = "./experiments/delta_Ndep")
+compare_pred_vs_obs$plot2  
