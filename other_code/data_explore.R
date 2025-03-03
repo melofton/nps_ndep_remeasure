@@ -9,7 +9,7 @@
 library(tidyverse)
 
 # load data
-df <- read_csv("./McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
+df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
 colnames(df)
 
 # how many trees per plot for each species?

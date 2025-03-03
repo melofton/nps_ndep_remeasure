@@ -8,7 +8,7 @@ library(lubridate)
 library(arrow)
 
 # list files
-out <- list.files("./experiments/linear_model",pattern = ".parquet",
+out <- list.files("./experiments/delta_Ndep",pattern = ".parquet",
                   full.names = TRUE)
 
 for(i in 1:length(out)){
@@ -32,3 +32,21 @@ ggplot(data = final)+
   geom_density(aes(x = p4, group = model_id, color = model_id, fill = model_id),
                alpha = 0.5)+
   theme_classic()
+
+ggplot(data = final)+
+  geom_density(aes(x = p5, group = model_id, color = model_id, fill = model_id),
+               alpha = 0.5)+
+  theme_classic()
+
+param_sum <- final %>%
+  select(model_id, p4, p5) %>%
+  pivot_longer(p4:p5,names_to = "param", values_to = "param_value") %>%
+  group_by(model_id, param) %>%
+  summarize(mean_param_value = mean(param_value, na.rm = TRUE)) %>%
+  pivot_wider(names_from = "param", values_from = "mean_param_value") %>%
+  ggplot(aes(x = p4, y = p5, group = model_id, color = model_id))+
+  geom_point(size = 2)+
+  theme_bw()+
+  geom_vline(xintercept = 0)+
+  geom_hline(yintercept = 0)
+param_sum
