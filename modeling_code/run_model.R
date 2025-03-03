@@ -15,9 +15,9 @@ df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_
 
 total_species <- length(unique(df$common_name))
 
-sim <- "delta_Ndep"
+sim <- "delta_Ndep_only"
 
-source("./modeling_code/linear_deltaNdep_growth_modeling_individualAndPlotEffect.R")
+source("./modeling_code/linear_deltaNdep_only_individualAndPlotEffect.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
