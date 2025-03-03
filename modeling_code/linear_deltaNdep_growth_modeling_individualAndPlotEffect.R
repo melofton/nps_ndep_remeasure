@@ -65,8 +65,7 @@ run_model <- function(k, df, sim){
     select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, Dep_Nbaseline, Dep_Ndelta, subp_BA_GT_m1, MAT, MAP, Dep_S) |>
     dplyr::filter(tree_ID %in% live_tree_ids) |>
     left_join(plots, by = join_by(plot_ID)) |> 
-    left_join(trees_index, by = join_by(tree_ID)) |>
-    slice(c(1:1000))
+    left_join(trees_index, by = join_by(tree_ID)) 
   
   mean_annual_avg_growth <- df1$AG_carbon_pYear
   start_measures <- df1$AG_carbon_m1
