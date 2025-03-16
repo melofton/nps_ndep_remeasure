@@ -76,6 +76,7 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
               mean_size = mean(AG_carbon_m1, na.rm = TRUE)) %>%
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name))
   
+  if(experiment_name == "delta_Ndep"){
   delta_growth_v_delta_Ndep <- function(global_tree_effect,
                             x,
                             p4,
@@ -87,6 +88,7 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
     growth_delta =  ((global_tree_effect + ndep_baseline*p4 + x*p5) * tree_agb_obs ^ p2) 
     y = growth_delta - growth_baseline
     return(y)
+  }
   }
   
   species_list <- unique(df1$common_name)

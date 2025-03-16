@@ -9,7 +9,7 @@ library(arrow)
 library(ggpubr)
 
 # list files
-out <- list.files("./experiments/delta_Ndep",pattern = ".parquet",
+out <- list.files("./experiments/delta_Ndep_only",pattern = ".parquet",
                   full.names = TRUE)
 
 for(i in 1:length(out)){
@@ -37,7 +37,9 @@ ggplot(data = final)+
 ggplot(data = final)+
   geom_density(aes(x = p5, group = model_id, color = model_id, fill = model_id),
                alpha = 0.5)+
-  theme_classic()
+  theme_classic()+
+  ggtitle("Delta Ndep only")+
+  xlim(c(-0.12, 0.12))
 
 Ndep_param_sum <- final %>%
   select(model_id, p4, p5) %>%
@@ -68,4 +70,5 @@ growth_vs_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv",
 
 # delta growth vs delta Ndep
 delta_growth_vs_delta_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-               model_output_folder = "./experiments/delta_Ndep")
+               model_output_folder = "./experiments/delta_Ndep",
+               experiment_name = "delta_Ndep_only")

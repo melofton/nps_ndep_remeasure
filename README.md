@@ -28,3 +28,9 @@
 
 **quadratic_model**: modeling growth directly with a quadratic rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect 
 
+**delta_Ndep**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a tree, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate
+
+**delta_Ndep_only**: modeling growth directly with a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate; the separate linear term for the historic rate of N deposition is omitted from this model
+
+**delta_env**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition
+
