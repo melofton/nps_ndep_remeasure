@@ -68,7 +68,8 @@ run_model <- function(k, df, sim){
     select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, Dep_Nbaseline, Dep_Ndelta, subp_BA_GT_m1, MAT, MAP_dm, Dep_S, Dep_Sbaseline, Dep_Sdelta) |>
     dplyr::filter(tree_ID %in% live_tree_ids) |>
     left_join(plots, by = join_by(plot_ID)) |> 
-    left_join(trees_index, by = join_by(tree_ID)) 
+    left_join(trees_index, by = join_by(tree_ID)) |>
+    slice(c(1:100))
   
   mean_annual_avg_growth <- df1$AG_carbon_pYear
   start_measures <- df1$AG_carbon_m1
@@ -153,36 +154,50 @@ run_model <- function(k, df, sim){
 
   }  ", fill=T,file=paste0("./experiments/",sim,"/",sim,"-growthModel-",tree_species,".txt"))
   
+  #black cherry, eastern cottonwood, sugar maple, yellow-poplar, quaking aspen
+  #ponderosa pine, paper birch, red spruce
+  init_values <- data.frame(species = c("black cherry","eastern cottonwood","sugar maple",
+                                        "yellow-poplar","quaking aspen","ponderosa pine",
+                                        "paper birch","red spruce"),
+                            p5 = c(0.0, 0.0, 0.0, 0.03, 0.0, -0.04, 0.0, 0.05),
+                            p5_delta = c(0.01, 0.5, 0.5, 0.02, 0.5, 0.01, 0.5, 0.05),
+                            p6 = c(0.01, 0.0, 0.0, 0.01, 0.0, 0.14, 0.0, 0.0),
+                            p6_delta = c(0.01, 0.5, 0.5, 0.02, 0.5, 0.02, 0.5, 0.05),
+                            p7 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                            p7_delta = c(0.01, 0.5, 0.5, 0.02, 0.5, 0.01, 0.5, 0.02),
+                            p8 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                            p8_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5))
+  
   inits <- list(list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.6,
                      "p3" = 1,
-                     "p5" = 0.5,
-                     "p6" = 0.5,
-                     "p7" = 0.5,
-                     "p8" = 0.5),
+                     "p5" = init_values[k,"p5"] + init_values[k,"p5_delta"],
+                     "p6" = init_values[k,"p6"] + init_values[k,"p6_delta"],
+                     "p7" = init_values[k,"p7"] + init_values[k,"p7_delta"],
+                     "p8" = init_values[k,"p8"] + init_values[k,"p8_delta"]),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p5" = 0,
-                     "p6" = 0,
-                     "p7" = 0,
-                     "p8" = 0),
+                     "p5" = init_values[k,"p5"],
+                     "p6" = init_values[k,"p6"],
+                     "p7" = init_values[k,"p7"],
+                     "p8" = init_values[k,"p8"]),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p5" = -0.5,
-                     "p6" = -0.5,
-                     "p7" = -0.5,
-                     "p8" = -0.5))
+                     "p5" = init_values[k,"p5"] - init_values[k,"p5_delta"],
+                     "p6" = init_values[k,"p6"] - init_values[k,"p6_delta"],
+                     "p7" = init_values[k,"p7"] - init_values[k,"p7_delta"],
+                     "p8" = init_values[k,"p8"] - init_values[k,"p8_delta"]))
   
   ssFit    <- jags.model(data=ssData, file=paste0("./experiments/",sim,"/",sim,"-growthModel-",tree_species,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
   parNames <- c("tree_effect", 
