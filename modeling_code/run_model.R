@@ -23,7 +23,7 @@ source("./modeling_code/linear_deltaEnv_individualAndPlotEffect.R")
 #   run_model(k, df, sim)
 # }
 
-future::plan("future::multisession", workers = 4) # workers is cores
+future::plan("future::multisession", workers = 8) # workers is number of sessions
 
 total_species <- length(unique(df$common_name))
 furrr::future_walk(1:total_species, run_model, df, sim)

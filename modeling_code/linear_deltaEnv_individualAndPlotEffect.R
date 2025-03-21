@@ -47,7 +47,8 @@ run_model <- function(k, df, sim){
   
   focal_data2 <- left_join(focal_data, baseline_dep, by = "tree_ID") %>%
     mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
-           Dep_Sdelta = Dep_S - Dep_Sbaseline) %>%
+           Dep_Sdelta = Dep_S - Dep_Sbaseline,
+           MAP_dm = MAP * 0.01) %>%
     filter(!is.na(Dep_Nbaseline) & !is.na(Dep_Ndelta) & !is.na(Dep_Sbaseline) & !is.na(Dep_Sdelta))
   
   trees_index <- focal_data2 |> 
@@ -64,11 +65,10 @@ run_model <- function(k, df, sim){
   
   df1 <- focal_data2 |> 
     mutate(dt = as.numeric(date_m2 - date_m1)/365) |> 
-    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, Dep_Nbaseline, Dep_Ndelta, subp_BA_GT_m1, MAT, MAP, Dep_S, Dep_Sbaseline, Dep_Sdelta) |>
+    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, Dep_Nbaseline, Dep_Ndelta, subp_BA_GT_m1, MAT, MAP_dm, Dep_S, Dep_Sbaseline, Dep_Sdelta) |>
     dplyr::filter(tree_ID %in% live_tree_ids) |>
     left_join(plots, by = join_by(plot_ID)) |> 
-    left_join(trees_index, by = join_by(tree_ID)) |>
-    slice(c(1:100))
+    left_join(trees_index, by = join_by(tree_ID)) 
   
   mean_annual_avg_growth <- df1$AG_carbon_pYear
   start_measures <- df1$AG_carbon_m1
@@ -81,7 +81,7 @@ run_model <- function(k, df, sim){
   sdep_baseline <- df1$Dep_Sbaseline
   sdep_delta <- df1$Dep_Sdelta
   mat <- df1$MAT
-  map <- df1$MAP
+  map_dm <- df1$MAP_dm
   n_measures <- nrow(df1)
 
   ssData   <- list(tree_agb_obs = start_measures,
@@ -94,7 +94,7 @@ run_model <- function(k, df, sim){
                    ndep_delta = ndep_delta,
                    sdep_delta = sdep_delta,
                    mat = mat,
-                   map = map,
+                   map_dm = map_dm,
                    plot_index = plot_index,
                    tree_index = tree_index)
                    #max_ndep = max(c(ndep), na.rm = TRUE),
@@ -143,7 +143,7 @@ run_model <- function(k, df, sim){
   
   for(t in 1:n_measures){
 
-    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5 + sdep_delta[t]*p6 + mat[t]*p7 + map[t]*p8) 
+    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5 + sdep_delta[t]*p6 + mat[t]*p7 + map_dm[t]*p8) 
     * tree_agb_obs[t] ^ p2) 
         * exp(-ba_gt[t]*p3)  
 
