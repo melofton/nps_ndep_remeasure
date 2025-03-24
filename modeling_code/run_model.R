@@ -11,13 +11,14 @@ library(bayesplot)
 library(furrr)
 
 df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
- filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+ #filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+  filter(common_name %in% c("eastern cottonwood"))
 
 total_species <- length(unique(df$common_name))
 
 sim <- "N_species"
 
-source("./modeling_code/linear_deltaEnv_individualAndPlotEffect.R")
+source("./modeling_code/linear_deltaEnv_NSpecies_individualAndPlotEffect.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
