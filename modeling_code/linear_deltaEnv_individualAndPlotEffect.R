@@ -36,20 +36,22 @@ run_model <- function(k, df, sim){
     dplyr::filter(!is.na(subp_BA_GT_m1) & !is.na(Dep_N)) |>
     ungroup() 
   
-  baseline_dep <- focal_data %>%
+  baseline_vars <- focal_data %>%
     select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, Dep_S15, Dep_S, MAT, MAP, date_m2, date_m1) %>%
-    filter(interval_no == 1) %>%
-    mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
-    mutate(total_years = 15 + dt) %>%
-    mutate(Dep_Nbaseline = (Dep_N15*total_years - Dep_N*dt) / 15,
-           Dep_Sbaseline = (Dep_S15*total_years - Dep_S*dt) / 15) %>%
-    select(tree_ID, Dep_Nbaseline, Dep_Sbaseline)
+    group_by(tree_ID) %>%
+    summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
+              Dep_Sbaseline = mean(Dep_S, na.rm = TRUE),
+              MAT_baseline = mean(MAT, na.rm = TRUE),
+              MAP_baseline = mean(MAP, na.rm = TRUE)) %>%
+    ungroup() %>%
+    select(tree_ID, Dep_Nbaseline, Dep_Sbaseline, MAT_baseline, MAP_baseline)
   
-  focal_data2 <- left_join(focal_data, baseline_dep, by = "tree_ID") %>%
+  focal_data2 <- left_join(focal_data, baseline_vars, by = "tree_ID") %>%
     mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
            Dep_Sdelta = Dep_S - Dep_Sbaseline,
-           MAP_dm = MAP * 0.01) %>%
-    filter(!is.na(Dep_Nbaseline) & !is.na(Dep_Ndelta) & !is.na(Dep_Sbaseline) & !is.na(Dep_Sdelta))
+           MAP_delta_dm = (MAP - MAP_baseline) * 0.01,
+           MAT_delta = MAT - MAT_baseline) %>%
+    filter(!is.na(Dep_Ndelta) & !is.na(Dep_Sdelta) & !is.na(MAP_delta_dm) & !is.na(MAT_delta))
   
   trees_index <- focal_data2 |> 
     dplyr::filter(common_name == tree_species) |> 
@@ -65,7 +67,7 @@ run_model <- function(k, df, sim){
   
   df1 <- focal_data2 |> 
     mutate(dt = as.numeric(date_m2 - date_m1)/365) |> 
-    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, Dep_Nbaseline, Dep_Ndelta, subp_BA_GT_m1, MAT, MAP_dm, Dep_S, Dep_Sbaseline, Dep_Sdelta) |>
+    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_Ndelta, subp_BA_GT_m1, MAP_delta_dm, Dep_Sdelta, MAT_delta) |>
     dplyr::filter(tree_ID %in% live_tree_ids) |>
     left_join(plots, by = join_by(plot_ID)) |> 
     left_join(trees_index, by = join_by(tree_ID)) 
@@ -76,12 +78,10 @@ run_model <- function(k, df, sim){
   tree_index <- df1$tree_index
   #dt <- df1$dt
   ba_gt <- df1$subp_BA_GT_m1
-  ndep_baseline <- df1$Dep_Nbaseline
   ndep_delta <- df1$Dep_Ndelta
-  sdep_baseline <- df1$Dep_Sbaseline
   sdep_delta <- df1$Dep_Sdelta
-  mat <- df1$MAT
-  map_dm <- df1$MAP_dm
+  mat_delta <- df1$MAT_delta
+  map_delta_dm <- df1$MAP_delta_dm
   n_measures <- nrow(df1)
 
   ssData   <- list(tree_agb_obs = start_measures,
@@ -93,8 +93,8 @@ run_model <- function(k, df, sim){
                    #dt = dt,
                    ndep_delta = ndep_delta,
                    sdep_delta = sdep_delta,
-                   mat = mat,
-                   map_dm = map_dm,
+                   mat_delta = mat_delta,
+                   map_delta_dm = map_delta_dm,
                    plot_index = plot_index,
                    tree_index = tree_index)
                    #max_ndep = max(c(ndep), na.rm = TRUE),
@@ -143,7 +143,7 @@ run_model <- function(k, df, sim){
   
   for(t in 1:n_measures){
 
-    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5 + sdep_delta[t]*p6 + mat[t]*p7 + map_dm[t]*p8) 
+    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5 + sdep_delta[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8) 
     * tree_agb_obs[t] ^ p2) 
         * exp(-ba_gt[t]*p3)  
 
@@ -158,12 +158,12 @@ run_model <- function(k, df, sim){
   init_values <- data.frame(species = c("black cherry","eastern cottonwood","sugar maple",
                                         "yellow-poplar","quaking aspen","ponderosa pine",
                                         "paper birch","red spruce"),
-                            p5 = c(0.0, 0.0, 0.0, 0.03, 0.0, -0.04, 0.0, 0.05),
-                            p5_delta = c(0.01, 0.5, 0.5, 0.02, 0.5, 0.01, 0.5, 0.05),
-                            p6 = c(0.01, 0.0, 0.0, 0.01, 0.0, 0.14, 0.0, 0.0),
-                            p6_delta = c(0.01, 0.5, 0.5, 0.02, 0.5, 0.02, 0.5, 0.05),
+                            p5 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                            p5_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
+                            p6 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                            p6_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                             p7 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                            p7_delta = c(0.01, 0.5, 0.5, 0.02, 0.5, 0.01, 0.5, 0.02),
+                            p7_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                             p8 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                             p8_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5))
   
