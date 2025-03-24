@@ -31,7 +31,7 @@ model {
   
   for(t in 1:n_measures){
 
-    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5 + sdep_delta[t]*p6 + mat[t]*p7 + map[t]*p8) 
+    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5 + sdep_delta[t]*p6 + mat[t]*p7 + map_dm[t]*p8) 
     * tree_agb_obs[t] ^ p2) 
         * exp(-ba_gt[t]*p3)  
 
