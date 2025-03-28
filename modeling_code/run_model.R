@@ -16,9 +16,9 @@ df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_
 
 total_species <- length(unique(df$common_name))
 
-sim <- "delta_env"
+sim <- "N_species"
 
-source("./modeling_code/linear_deltaEnv_individualAndPlotEffect.R")
+source("./modeling_code/linear_deltaEnv_NSpecies_individualAndPlotEffect.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)

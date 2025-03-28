@@ -32,5 +32,9 @@
 
 **delta_Ndep_only**: modeling growth directly with a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate; the separate linear term for the historic rate of N deposition is omitted from this model
 
-**delta_env**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition
+**delta_env**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'
+
+**new_delta_Ndep_only**: modeling growth directly with a linear term for delta Ndep; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'
+
+**N_species**: modeling growth directly with a linear term for delta Ndep, with Ndep broken out into Ndep from oxidized and reduced forms of nitrogen; all other environmental variables are also included (S, temp, precip)
 

@@ -39,21 +39,19 @@ run_model <- function(k, df, sim){
   baseline_vars <- focal_data %>%
     select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, Dep_S15, Dep_S, MAT, MAP, date_m2, date_m1) %>%
     group_by(tree_ID) %>%
-    summarize(Dep_Noxibaseline = mean(Dep_Noxi, na.rm = TRUE),
-              Dep_Nredbaseline = mean(Dep_Nred, na.rm = TRUE),
+    summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
               Dep_Sbaseline = mean(Dep_S, na.rm = TRUE),
               MAT_baseline = mean(MAT, na.rm = TRUE),
               MAP_baseline = mean(MAP, na.rm = TRUE)) %>%
     ungroup() %>%
-    select(tree_ID, Dep_Noxibaseline, Dep_Nredbaseline, Dep_Sbaseline, MAT_baseline, MAP_baseline)
+    select(tree_ID, Dep_Nbaseline, Dep_Sbaseline, MAT_baseline, MAP_baseline)
   
   focal_data2 <- left_join(focal_data, baseline_vars, by = "tree_ID") %>%
-    mutate(Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
-           Dep_Nreddelta = Dep_Nred - Dep_Nredbaseline,
+    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
            Dep_Sdelta = Dep_S - Dep_Sbaseline,
            MAP_delta_dm = (MAP - MAP_baseline) * 0.01,
            MAT_delta = MAT - MAT_baseline) %>%
-    filter(!is.na(Dep_Noxidelta) & !is.na(Dep_Nreddelta) & !is.na(Dep_Sdelta) & !is.na(MAP_delta_dm) & !is.na(MAT_delta))
+    filter(!is.na(Dep_Ndelta) & !is.na(Dep_Sdelta) & !is.na(MAP_delta_dm) & !is.na(MAT_delta))
   
   trees_index <- focal_data2 |> 
     dplyr::filter(common_name == tree_species) |> 
@@ -69,7 +67,7 @@ run_model <- function(k, df, sim){
   
   df1 <- focal_data2 |> 
     mutate(dt = as.numeric(date_m2 - date_m1)/365) |> 
-    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_Noxidelta, Dep_Nreddelta, subp_BA_GT_m1, MAP_delta_dm, Dep_Sdelta, MAT_delta) |>
+    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_Ndelta, subp_BA_GT_m1, MAP_delta_dm, Dep_Sdelta, MAT_delta) |>
     dplyr::filter(tree_ID %in% live_tree_ids) |>
     left_join(plots, by = join_by(plot_ID)) |> 
     left_join(trees_index, by = join_by(tree_ID)) 
@@ -80,8 +78,7 @@ run_model <- function(k, df, sim){
   tree_index <- df1$tree_index
   #dt <- df1$dt
   ba_gt <- df1$subp_BA_GT_m1
-  noxidep_delta <- df1$Dep_Noxidelta
-  nreddep_delta <- df1$Dep_Nreddelta
+  ndep_delta <- df1$Dep_Ndelta
   sdep_delta <- df1$Dep_Sdelta
   mat_delta <- df1$MAT_delta
   map_delta_dm <- df1$MAP_delta_dm
@@ -94,11 +91,7 @@ run_model <- function(k, df, sim){
                    n_measures = n_measures,
                    ba_gt = ba_gt,
                    #dt = dt,
-                   noxidep_delta = noxidep_delta,
-                   nreddep_delta = nreddep_delta,
-                   sdep_delta = sdep_delta,
-                   mat_delta = mat_delta,
-                   map_delta_dm = map_delta_dm,
+                   ndep_delta = ndep_delta,
                    plot_index = plot_index,
                    tree_index = tree_index)
                    #max_ndep = max(c(ndep), na.rm = TRUE),
@@ -122,11 +115,7 @@ run_model <- function(k, df, sim){
   procErr ~ dunif(0.0001,10)
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) #Sample in log space
-  p4 ~ dnorm(0,0.001)
   p5 ~ dnorm(0,0.001)
-  p6 ~ dnorm(0,0.001)
-  p7 ~ dnorm(0,0.001)
-  p8 ~ dnorm(0,0.001)
   #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
   #p5inv2 ~ dexp(0.001)  
   #p6 ~ dunif(min_temp*0.5, max_temp*2)
@@ -148,7 +137,7 @@ run_model <- function(k, df, sim){
   
   for(t in 1:n_measures){
 
-    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + noxidep_delta[t]*p4 + nreddep_delta[t]*p5 + sdep_delta[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8) 
+    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_delta[t]*p5) 
     * tree_agb_obs[t] ^ p2) 
         * exp(-ba_gt[t]*p3)  
 
@@ -163,8 +152,6 @@ run_model <- function(k, df, sim){
   init_values <- data.frame(species = c("black cherry","eastern cottonwood","sugar maple",
                                         "yellow-poplar","quaking aspen","ponderosa pine",
                                         "paper birch","red spruce"),
-                            p4 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                            p4_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                             p5 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                             p5_delta = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
                             p6 = c(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
@@ -180,43 +167,27 @@ run_model <- function(k, df, sim){
                      "procErr" = 0.001,
                      "p2" = 0.6,
                      "p3" = 1,
-                     "p4" = init_values[k,"p4"] + init_values[k,"p4_delta"],
-                     "p5" = init_values[k,"p5"] + init_values[k,"p5_delta"],
-                     "p6" = init_values[k,"p6"] + init_values[k,"p6_delta"],
-                     "p7" = init_values[k,"p7"] + init_values[k,"p7_delta"],
-                     "p8" = init_values[k,"p8"] + init_values[k,"p8_delta"]),
+                     "p5" = init_values[k,"p5"] + init_values[k,"p5_delta"]),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p4" = init_values[k,"p4"],
-                     "p5" = init_values[k,"p5"],
-                     "p6" = init_values[k,"p6"],
-                     "p7" = init_values[k,"p7"],
-                     "p8" = init_values[k,"p8"]),
+                     "p5" = init_values[k,"p5"]),
                 list("global_tree_effect" = 1,
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
                      "p2" = 0.4,
                      "p3" = 1,
-                     "p4" = init_values[k,"p4"] - init_values[k,"p4_delta"],
-                     "p5" = init_values[k,"p5"] - init_values[k,"p5_delta"],
-                     "p6" = init_values[k,"p6"] - init_values[k,"p6_delta"],
-                     "p7" = init_values[k,"p7"] - init_values[k,"p7_delta"],
-                     "p8" = init_values[k,"p8"] - init_values[k,"p8_delta"]))
+                     "p5" = init_values[k,"p5"] - init_values[k,"p5_delta"]))
   
   ssFit    <- jags.model(data=ssData, file=paste0("./experiments/",sim,"/",sim,"-growthModel-",tree_species,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
   parNames <- c("tree_effect", 
                 "p2", 
                 "p3", 
-                "p4",
                 "p5",
-                "p6",
-                "p7",
-                "p8",
                 "procErr", 
                 "global_tree_effect",
                 "plot_effect")
@@ -224,12 +195,8 @@ run_model <- function(k, df, sim){
   ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=15000, thin = 5)
   mcmc <- spread_draws(ssFit,
                        p2, 
-                       p3,
-                       p4,
+                       p3, 
                        p5,
-                       p6,
-                       p7,
-                       p8,
                        procErr, 
                        `tree_effect[1]`,
                        `tree_effect[51]`,
@@ -258,7 +225,7 @@ run_model <- function(k, df, sim){
   p <- mcmc_burned |> 
     rename(chain = .chain,
            iteration = .iteration) |> 
-    select(chain:p8) |> 
+    select(chain:p5) |> 
     select(-.draw, -iteration) |> 
     mcmc_pairs()
   
