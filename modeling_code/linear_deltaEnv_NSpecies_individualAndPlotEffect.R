@@ -37,7 +37,7 @@ run_model <- function(k, df, sim){
     ungroup() 
   
   baseline_vars <- focal_data %>%
-    select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, Dep_S15, Dep_S, MAT, MAP, date_m2, date_m1) %>%
+    select(common_name, tree_ID, interval_no, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, date_m2, date_m1) %>%
     group_by(tree_ID) %>%
     summarize(Dep_Noxibaseline = mean(Dep_Noxi, na.rm = TRUE),
               Dep_Nredbaseline = mean(Dep_Nred, na.rm = TRUE),
