@@ -22,53 +22,18 @@ run_model <- function(k, df, sim){
   
   print(tree_species)
   
-  live_tree_ids <- df |> 
-    dplyr::filter(common_name == tree_species) |> 
-    summarise(count = n(),
-              sum = sum(live_m2), .by = tree_ID) |> 
-    dplyr::filter(count >= sum) |> 
-    pull(tree_ID)
+  focal_data <- df %>%
+    dplyr::filter(common_name == tree_species) 
   
-  focal_data <- df |> 
-    dplyr::filter(tree_ID %in% live_tree_ids) |> 
-    group_by(tree_ID) |> 
-    tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
-    dplyr::filter(!is.na(subp_BA_GT_m1) & !is.na(Dep_N)) |>
-    ungroup() 
-  
-  baseline_vars <- focal_data %>%
-    select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, Dep_S15, Dep_S, MAT, MAP, date_m2, date_m1) %>%
-    group_by(tree_ID) %>%
-    summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
-              Dep_Sbaseline = mean(Dep_S, na.rm = TRUE),
-              MAT_baseline = mean(MAT, na.rm = TRUE),
-              MAP_baseline = mean(MAP, na.rm = TRUE)) %>%
-    ungroup() %>%
-    select(tree_ID, Dep_Nbaseline, Dep_Sbaseline, MAT_baseline, MAP_baseline)
-  
-  focal_data2 <- left_join(focal_data, baseline_vars, by = "tree_ID") %>%
-    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
-           Dep_Sdelta = Dep_S - Dep_Sbaseline,
-           MAP_delta_dm = (MAP - MAP_baseline) * 0.01,
-           MAT_delta = MAT - MAT_baseline) %>%
-    filter(!is.na(Dep_Ndelta) & !is.na(Dep_Sdelta) & !is.na(MAP_delta_dm) & !is.na(MAT_delta))
-  
-  trees_index <- focal_data2 |> 
-    dplyr::filter(common_name == tree_species) |> 
+  trees_index <- focal_data |> 
     distinct(tree_ID) |> 
-    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     mutate(tree_index = 1:n())
   
-  plots <- focal_data2 |> 
-    dplyr::filter(common_name == tree_species) |> 
-    dplyr::filter(tree_ID %in% live_tree_ids) |> 
+  plots <- focal_data |> 
     distinct(plot_ID) |> 
     mutate(plot_index = 1:n()) #USE THIS TO GET PLOT_INDEX BELOW
   
-  df1 <- focal_data2 |> 
-    mutate(dt = as.numeric(date_m2 - date_m1)/365) |> 
-    select(AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_Ndelta, subp_BA_GT_m1, MAP_delta_dm, Dep_Sdelta, MAT_delta) |>
-    dplyr::filter(tree_ID %in% live_tree_ids) |>
+  df1 <- focal_data |> 
     left_join(plots, by = join_by(plot_ID)) |> 
     left_join(trees_index, by = join_by(tree_ID)) 
   
