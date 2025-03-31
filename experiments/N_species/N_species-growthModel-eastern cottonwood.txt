@@ -6,11 +6,11 @@ model {
   procErr ~ dunif(0.0001,10)
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) #Sample in log space
+  p4 ~ dnorm(0,0.001)
   p5 ~ dnorm(0,0.001)
   p6 ~ dnorm(0,0.001)
   p7 ~ dnorm(0,0.001)
   p8 ~ dnorm(0,0.001)
-  p9 ~ dnorm(0,0.001)
   #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
   #p5inv2 ~ dexp(0.001)  
   #p6 ~ dunif(min_temp*0.5, max_temp*2)
@@ -32,7 +32,7 @@ model {
   
   for(t in 1:n_measures){
 
-    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + noxidep_delta[t]*p5 + nreddep_delta[t]*p6 + sdep_delta[t]*p7 + mat[t]*p8 + map_dm[t]*p9) 
+    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + noxidep_delta[t]*p4 + nreddep_delta[t]*p5 + sdep_delta[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8) 
     * tree_agb_obs[t] ^ p2) 
         * exp(-ba_gt[t]*p3)  
 
