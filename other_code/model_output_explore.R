@@ -52,10 +52,16 @@ Ndep_param_sum <- final %>%
 Ndep_param_sum
 
 # compare obs vs pred
-
+source("./other_code/pred_vs_obs.R")
 compare_pred_vs_obs <- pred_vs_obs(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                                    model_output_folder = "./experiments/delta_Ndep")
+                                    model_output_folder = "./experiments/new_delta_Ndep_only")
 compare_pred_vs_obs$plot2 
+compare_pred_vs_obs$plot1
+rsq <- function(pred, obs){
+  1 - (sum((obs - pred)^2, na.rm = TRUE) / sum((obs - mean(obs, na.rm = TRUE))^2, na.rm = TRUE))
+}
+
+r2 <- rsq(pred = compare_pred_vs_obs$df$pred, obs = compare_pred_vs_obs$df$AG_carbon_pYear)
 
 # growth vs size
 growth_vs_size(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 

@@ -5,7 +5,7 @@
 # Purpose: calculate model predictions using JAGS model output and compare to observations
 
 pred_vs_obs <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/delta_Ndep"){
+                        model_output_folder = "./experiments/new_delta_Ndep_only"){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
@@ -51,51 +51,60 @@ pred_vs_obs <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11
   
   
   ## READ IN AND WRANGLE DATA
-  df <- read_csv(data, show_col_types = FALSE) %>%
-    filter(!common_name %in% c("Douglas-fir","western hemlock"))
+  og_df <- read_csv(data, show_col_types = FALSE) %>%
+    dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+  #filter(common_name %in% c("eastern cottonwood"))
   
-  live_tree_ids <- df |> 
+  focal_df <- og_df %>%
+    select(common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_Noxi, Dep_Nred, 
+           Dep_S, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
+           AG_carbon_m2, subp_BA_GT_m1, live_m2) 
+  
+  baseline_vars <- focal_df %>%
+    group_by(plot_ID) %>%
+    summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
+              Dep_Noxibaseline = mean(Dep_Noxi, na.rm = TRUE),
+              Dep_Nredbaseline = mean(Dep_Nred, na.rm = TRUE),
+              Dep_Sbaseline = mean(Dep_S, na.rm = TRUE),
+              MAT_baseline = mean(MAT, na.rm = TRUE),
+              MAP_baseline = mean(MAP, na.rm = TRUE)) %>%
+    ungroup()
+  
+  focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
+    group_by(plot_ID) %>%
+    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
+           Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
+           Dep_Nreddelta = Dep_Nred - Dep_Nredbaseline,
+           Dep_Sdelta = Dep_S - Dep_Sbaseline,
+           MAP_delta_dm = (MAP - MAP_baseline) * 0.01,
+           MAT_delta = MAT - MAT_baseline) %>%
+    ungroup() 
+  
+  live_tree_ids <- focal_df2 |> 
     summarise(count = n(),
               sum = sum(live_m2), .by = tree_ID) |> 
     dplyr::filter(count >= sum) |> 
     pull(tree_ID)
   
-  focal_data <- df |> 
+  focal_df3 <- focal_df2 |> 
     dplyr::filter(tree_ID %in% live_tree_ids) |> 
-    group_by(common_name, tree_ID) |> 
+    group_by(tree_ID) |> 
     tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
-    dplyr::filter(!is.na(subp_BA_GT_m1) & !is.na(Dep_N)) |>
     ungroup() 
   
-  baseline_Ndep <- focal_data %>%
-    select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, date_m2, date_m1) %>%
-    filter(interval_no == 1) %>%
-    mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
-    mutate(total_years = 15 + dt) %>%
-    mutate(Dep_Nbaseline = (Dep_N15*total_years - Dep_N*dt) / 15) %>%
-    select(tree_ID, Dep_Nbaseline)
+  df <- focal_df3 %>%
+    dplyr::filter(complete.cases(.)) %>%
+    group_by(tree_ID) %>%
+    mutate(num_intervals = max(interval_no, na.rm = TRUE)) %>%
+    ungroup() %>%
+    dplyr::filter(num_intervals >= 2) 
   
-  focal_data2 <- left_join(focal_data, baseline_Ndep, by = "tree_ID") %>%
-    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline) %>%
-    filter(!is.na(Dep_Nbaseline) & !is.na(Dep_Ndelta))
-  
-  trees_index <- focal_data2 |> 
+  trees_index <- df |> 
     group_by(common_name) |> 
     distinct(tree_ID) |> 
-    dplyr::filter(tree_ID %in% live_tree_ids) |> 
     mutate(tree_index = 1:n())
   
-  plots <- focal_data2 |> 
-    group_by(common_name) |> 
-    dplyr::filter(tree_ID %in% live_tree_ids) |> 
-    distinct(plot_ID) |> 
-    mutate(plot_index = 1:n()) #USE THIS TO GET PLOT_INDEX BELOW
-  
-  df1 <- focal_data2 |> 
-    mutate(dt = as.numeric(date_m2 - date_m1)/365) |> 
-    select(common_name, AG_carbon_pYear, AG_carbon_m1, AG_carbon_m2, tree_ID, plot_ID, dt, Dep_N, Dep_Nbaseline, Dep_Ndelta, subp_BA_GT_m1, MAT, MAP, Dep_S) |>
-    dplyr::filter(tree_ID %in% live_tree_ids) |>
-    left_join(plots, by = join_by(common_name, plot_ID)) |> 
+  df1 <- df %>%
     left_join(trees_index, by = join_by(common_name, tree_ID)) |>
     filter(tree_index %in% unique(tree_effects$tree_index)) |>
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) |>
@@ -104,8 +113,6 @@ pred_vs_obs <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11
   
   n_measures <- nrow(df1)
   tree_effect <- df1$tree_effect
-  ndep_baseline <- df1$Dep_Nbaseline
-  p4 <- df1$p4
   ndep_delta <- df1$Dep_Ndelta
   p5 <- df1$p5
   tree_agb_obs <- df1$AG_carbon_m1
@@ -116,7 +123,7 @@ pred_vs_obs <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11
   pred <- NULL
   
   for(n in 1:n_measures){
-    pred[n] <-  ((tree_effect[n] + ndep_baseline[n]*p4[n] + ndep_delta[n]*p5[n]) * tree_agb_obs[n] ^ p2[n])  * exp(-ba_gt[n]*p3[n]) 
+    pred[n] <-  ((tree_effect[n] + ndep_delta[n]*p5[n]) * tree_agb_obs[n] ^ p2[n])  * exp(-ba_gt[n]*p3[n]) 
   }
   
   df1$pred <- pred
