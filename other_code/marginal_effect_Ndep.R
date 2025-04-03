@@ -135,7 +135,7 @@ p <- ggplot(data = final_pred)+
   theme_bw()+
   scale_color_brewer(palette = 1)+
   scale_fill_brewer(palette = 1)+
-  labs(color = "", fill = "", x = expression(paste("growth (kg C ", y^-1," ",ind^-1,")")))+
+  labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))
 
 return(p)

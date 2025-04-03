@@ -4,12 +4,14 @@
 
 # Purpose: calculate model predictions using JAGS model output and compare to observations
 
+source("./other_code/get_model_inputs.R")
+
 growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/delta_Ndep"){
+                        model_output_folder = "./experiments/delta_env_saveTreeEffect"){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
-  out <- list.files(model_output_folder,pattern = ".parquet",
+  out <- list.files(model_output_folder,pattern = "mcmc.parquet",
                     full.names = TRUE)
   
   for(i in 1:length(out)){
@@ -39,66 +41,39 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
     rename(common_name = model_id) 
   
   final_param_sum <- param_sum %>% 
-    select(common_name, global_tree_effect:p5)
+    select(common_name, global_tree_effect:p8)
   
   ## READ IN AND WRANGLE DATA
-  df <- read_csv(data, show_col_types = FALSE) %>%
-    filter(!common_name %in% c("Douglas-fir","western hemlock"))
+  df <- get_model_inputs(data)
   
-  live_tree_ids <- df |> 
-    summarise(count = n(),
-              sum = sum(live_m2), .by = tree_ID) |> 
-    dplyr::filter(count >= sum) |> 
-    pull(tree_ID)
-  
-  focal_data <- df |> 
-    dplyr::filter(tree_ID %in% live_tree_ids) |> 
-    group_by(common_name, tree_ID) |> 
-    tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
-    dplyr::filter(!is.na(subp_BA_GT_m1) & !is.na(Dep_N)) |>
-    ungroup() 
-  
-  baseline_Ndep <- focal_data %>%
-    select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, date_m2, date_m1) %>%
-    filter(interval_no == 1) %>%
-    mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
-    mutate(total_years = 15 + dt) %>%
-    mutate(Dep_Nbaseline = (Dep_N15*total_years - Dep_N*dt) / 15) %>%
-    select(tree_ID, Dep_Nbaseline)
-  
-  focal_data2 <- left_join(focal_data, baseline_Ndep, by = "tree_ID") %>%
-    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline) %>%
-    filter(!is.na(Dep_Nbaseline) & !is.na(Dep_Ndelta))
-  
-  df1 <- focal_data2 %>%
-    group_by(common_name) %>%
-    summarize(mean_baseline_Ndep = mean(Dep_Nbaseline, na.rm = TRUE),
-              mean_delta_Ndep = mean(Dep_Ndelta, na.rm = TRUE),
-              min_size = min(AG_carbon_m1, na.rm = TRUE),
-              max_size = max(AG_carbon_m1, na.rm = TRUE)) %>%
+  df1 <- df %>%
+    group_by(common_name, species) %>%
+    summarize(min_size = min(AG_carbon_m1, na.rm = TRUE),
+              max_size = max(AG_carbon_m1, na.rm = TRUE),
+              mean_ba_gt = mean(subp_BA_GT_m1, na.rm = TRUE)) %>%
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name))
   
   growth_v_size <- function(global_tree_effect,
-                            ndep_baseline,
-                            p4,
                             ndep_delta,
                             p5,
                             x,
-                            p2){
-    y =  ((global_tree_effect + ndep_baseline*p4 + ndep_delta*p5) * x ^ p2) 
+                            p2,
+                            p3,
+                            ba_gt){
+    y =  ((global_tree_effect + ndep_delta*p5) * x ^ p2) * exp(-ba_gt*p3) 
   }
   
-  species_list <- unique(df1$common_name)
+  species_list <- sort(unique(df1$species))
   
   plot_list <- NULL
   
   for(i in 1:length(species_list)){
     
     current_species_data <- df1 %>%
-      filter(common_name == species_list[i])
+      filter(species == species_list[i])
     
     current_species_params <- final_param_sum %>%
-      filter(common_name == species_list[i])
+      filter(common_name == current_species_data$common_name[1])
     
     min_size <- current_species_data$min_size
     max_size <- current_species_data$max_size
@@ -107,35 +82,55 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
       ggplot() +
       xlim(min_size, max_size) +
       geom_function(fun = growth_v_size, args = list(global_tree_effect = current_species_params$global_tree_effect,
-                                                     ndep_baseline = current_species_data$mean_baseline_Ndep,
+                                                     ba_gt = current_species_data$mean_ba_gt,
                                                      ndep_delta = 0,
                                                      p2 = current_species_params$p2,
-                                                     p4 = current_species_params$p4,
+                                                     p3 = current_species_params$p3,
                                                      p5 = current_species_params$p5),
-                    aes(col = "mean baseline N dep.")) +
+                    aes(col = "baseline N dep.")) +
       geom_function(fun = growth_v_size, args = list(global_tree_effect = current_species_params$global_tree_effect,
-                                                     ndep_baseline = current_species_data$mean_baseline_Ndep,
-                                                     ndep_delta = current_species_data$mean_delta_Ndep,
+                                                     ba_gt = current_species_data$mean_ba_gt,
+                                                     ndep_delta = -1,
                                                      p2 = current_species_params$p2,
-                                                     p4 = current_species_params$p4,
+                                                     p3 = current_species_params$p3,
                                                      p5 = current_species_params$p5),
-                    aes(col = "mean baseline N dep. +/- mean change"))+
-      scale_color_manual(values = c("mean baseline N dep." = "black",
-                                    "mean baseline N dep. +/- mean change" = "red"))+
-      xlab("AG_carbon")+
-      ylab("AG_carbon_pYear")+
-      ggtitle(paste0(species_list[i],": mean delta Ndep = ",round(current_species_data$mean_delta_Ndep,2)))+
+                    aes(col = "marginal N dep. decrease"))+
+      geom_function(fun = growth_v_size, args = list(global_tree_effect = current_species_params$global_tree_effect,
+                                                     ba_gt = current_species_data$mean_ba_gt,
+                                                     ndep_delta = 1,
+                                                     p2 = current_species_params$p2,
+                                                     p3 = current_species_params$p3,
+                                                     p5 = current_species_params$p5),
+                    aes(col = "marginal N dep. increase"))+
+      scale_color_manual(values = c("baseline N dep." = "black",
+                                    "marginal N dep. decrease" = "blue",
+                                    "marginal N dep. increase" = "red"))+
+      xlab(expression(paste("tree size (kg C ", ind^-1,")")))+
+      ylab(expression(paste("growth (kg C ", y^-1," ",ind^-1,")")))+
+      ggtitle(current_species_data$species)+
       theme_bw()+
-      theme(legend.position = "bottom")
+      theme(legend.position = "bottom")+
+      labs(color = "")
+    
+    if(i == 1){
+      # Extract the legend. Returns a gtable
+      legend <- get_legend(base)
+      
+      # Convert to a ggplot and print
+      leg <- as_ggplot(legend)
+    }
+    
+    base <- base + theme(legend.position = "none")
     
     plot_list[[i]] <- base
   }
   
-  final_plot <- ggpubr::ggarrange(plotlist=plot_list,ncol = 2, nrow = 4) +
-    bgcolor("white")
-
-  ggsave(plot = final_plot, filename = "./visualizations/delta_Ndep_growth_vs_size.tif",
-         device = "tiff", height = 12, width = 10, units = "in")
+  final_plot <- ggpubr::ggarrange(ggarrange(plotlist=plot_list,ncol = 2, nrow = 4),
+                                  leg,
+                                  nrow = 2,
+                                  heights = c(1, 0.1)) 
+  
+  return(final_plot)
   
   message("all done!")
     

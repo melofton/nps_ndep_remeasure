@@ -168,7 +168,7 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
       xlim(0, min_delta_Ndep) +
       theme_bw() +
       xlab(expression(paste("N deposition decrease (kg N ", ha^-1," ",y^-1,")"))) +
-      ylab(expression(paste("growth (kg C ", y^-1," ",ind^-1,")")))
+      ylab(expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))
   }
   p1
   
@@ -190,7 +190,7 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
   
   p <- ggarrange(p1,leg,
                   ncol = 2,nrow = 1,
-                  widths = c(1,0.3)
+                  widths = c(1,0.5)
   ) 
   
   return(p)
