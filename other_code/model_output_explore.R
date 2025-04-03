@@ -80,11 +80,11 @@ delta_growth_vs_delta_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
 # separating N into different species
 
 # list files
-out1 <- list.files("./experiments/new_delta_Ndep_only",pattern = ".parquet",
+out1 <- list.files("./experiments/new_delta_Ndep_only_saveTreeEffect",pattern = "mcmc.parquet",
                   full.names = TRUE)
-out2 <- list.files("./experiments/delta_env",pattern = ".parquet",
+out2 <- list.files("./experiments/delta_env_saveTreeEffect",pattern = "mcmc.parquet",
                    full.names = TRUE)
-out3 <- list.files("./experiments/N_species",pattern = ".parquet",
+out3 <- list.files("./experiments/N_species_saveTreeEffect",pattern = "mcmc.parquet",
                    full.names = TRUE)
 out <- c(out1,out2, out3)
 
@@ -108,10 +108,10 @@ final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
   select(model_id, spp_id, p2, p3, p4, p5, p6, p7, p8) %>%
   pivot_longer(p2:p8, names_to = "parameter_name", values_to = "parameter_value") %>%
-  mutate(parameter_name = ifelse(model_id %in% c("new_delta_Ndep_only") & parameter_name == "p5","delta_Ndep_only",
-                                 ifelse(model_id == "N_species" & parameter_name == "p4","delta_Ndep_oxi",
-                                        ifelse(model_id == "N_species" & parameter_name == "p5","delta_Ndep_red",
-                                               ifelse(model_id == "delta_env" & parameter_name == "p5","delta_Ndep_env",parameter_name))))) %>%
+  mutate(parameter_name = ifelse(model_id %in% c("new_delta_Ndep_only_saveTreeEffect") & parameter_name == "p5","delta_Ndep_only",
+                                 ifelse(model_id == "N_species_saveTreeEffect" & parameter_name == "p4","delta_Ndep_oxi",
+                                        ifelse(model_id == "N_species_saveTreeEffect" & parameter_name == "p5","delta_Ndep_red",
+                                               ifelse(model_id == "delta_env_saveTreeEffect" & parameter_name == "p5","delta_Ndep_env",parameter_name))))) %>%
   filter(parameter_name %in% c("delta_Ndep_only","delta_Ndep_oxi","delta_Ndep_red", "delta_Ndep_env"))
 
 ggplot(data = final1)+

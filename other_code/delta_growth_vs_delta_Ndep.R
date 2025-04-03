@@ -5,11 +5,12 @@
 # Purpose: calculate model predictions using JAGS model output and compare to observations
 
 delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/delta_Ndep"){
+                        model_output_folder = "./experiments/delta_Ndep",
+                        experiment_name = "new_delta_Ndep_only_saveTreeEffect"){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
-  out <- list.files(model_output_folder,pattern = ".parquet",
+  out <- list.files(model_output_folder,pattern = "mcmc.parquet",
                     full.names = TRUE)
   
   for(i in 1:length(out)){
@@ -39,61 +40,72 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
     rename(common_name = model_id) 
   
   final_param_sum <- param_sum %>% 
-    select(common_name, global_tree_effect:p5)
+    select(-procErr)
   
   ## READ IN AND WRANGLE DATA
-  df <- read_csv(data, show_col_types = FALSE) %>%
-    filter(!common_name %in% c("Douglas-fir","western hemlock"))
+  og_df <- read_csv(data, show_col_types = FALSE) %>%
+    dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+  #filter(common_name %in% c("eastern cottonwood"))
   
-  live_tree_ids <- df |> 
+  focal_df <- og_df %>%
+    select(species, common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_Noxi, Dep_Nred, 
+           Dep_S, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
+           AG_carbon_m2, subp_BA_GT_m1, live_m2) 
+  
+  baseline_vars <- focal_df %>%
+    select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP) %>%
+    distinct(.) %>%
+    group_by(plot_ID) %>%
+    summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
+              Dep_Noxibaseline = mean(Dep_Noxi, na.rm = TRUE),
+              Dep_Nredbaseline = mean(Dep_Nred, na.rm = TRUE),
+              Dep_Sbaseline = mean(Dep_S, na.rm = TRUE),
+              MAT_baseline = mean(MAT, na.rm = TRUE),
+              MAP_baseline = mean(MAP, na.rm = TRUE)) %>%
+    ungroup()
+  
+  focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
+    group_by(plot_ID) %>%
+    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
+           Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
+           Dep_Nreddelta = Dep_Nred - Dep_Nredbaseline,
+           Dep_Sdelta = Dep_S - Dep_Sbaseline,
+           MAP_delta_dm = (MAP - MAP_baseline) * 0.01,
+           MAT_delta = MAT - MAT_baseline) %>%
+    ungroup() 
+  
+  live_tree_ids <- focal_df2 |> 
     summarise(count = n(),
               sum = sum(live_m2), .by = tree_ID) |> 
     dplyr::filter(count >= sum) |> 
     pull(tree_ID)
   
-  focal_data <- df |> 
+  focal_df3 <- focal_df2 |> 
     dplyr::filter(tree_ID %in% live_tree_ids) |> 
-    group_by(common_name, tree_ID) |> 
+    group_by(tree_ID) |> 
     tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
-    dplyr::filter(!is.na(subp_BA_GT_m1) & !is.na(Dep_N)) |>
     ungroup() 
   
-  baseline_Ndep <- focal_data %>%
-    select(common_name, tree_ID, interval_no, Dep_N15, Dep_N, date_m2, date_m1) %>%
-    filter(interval_no == 1) %>%
-    mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
-    mutate(total_years = 15 + dt) %>%
-    mutate(Dep_Nbaseline = (Dep_N15*total_years - Dep_N*dt) / 15) %>%
-    select(tree_ID, Dep_Nbaseline)
+  df <- focal_df3 %>%
+    dplyr::filter(complete.cases(.)) %>%
+    group_by(tree_ID) %>%
+    mutate(num_intervals = max(interval_no, na.rm = TRUE)) %>%
+    ungroup() %>%
+    dplyr::filter(num_intervals >= 2)
   
-  focal_data2 <- left_join(focal_data, baseline_Ndep, by = "tree_ID") %>%
-    mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline) %>%
-    filter(!is.na(Dep_Nbaseline) & !is.na(Dep_Ndelta))
-  
-  df1 <- focal_data2 %>%
-    group_by(common_name) %>%
-    summarize(mean_baseline_Ndep = mean(Dep_Nbaseline, na.rm = TRUE),
-              mean_size = mean(AG_carbon_m1, na.rm = TRUE)) %>%
-    mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name))
-  
-  if(experiment_name == "delta_Ndep"){
-  delta_growth_v_delta_Ndep <- function(global_tree_effect,
-                            x,
-                            p4,
-                            ndep_baseline,
-                            p5,
-                            tree_agb_obs,
-                            p2){
-    growth_baseline =  ((global_tree_effect + ndep_baseline*p4 + 0*p5) * tree_agb_obs ^ p2)
-    growth_delta =  ((global_tree_effect + ndep_baseline*p4 + x*p5) * tree_agb_obs ^ p2) 
-    y = growth_delta - growth_baseline
-    return(y)
-  }
-  }
+  df1 <- df %>%
+    group_by(species, common_name) %>%
+    summarize(mean_size = mean(AG_carbon_m1, na.rm = TRUE),
+              mean_Dep_Sdelta = mean(Dep_Sdelta, na.rm = TRUE),
+              mean_MAT_delta = mean(MAT_delta, na.rm = TRUE),
+              mean_MAP_delta_dm = mean(MAP_delta_dm, na.rm = TRUE),
+              mean_ba_gt = mean(subp_BA_GT_m1, na.rm = TRUE)) %>%
+    mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
+    ungroup()
   
   species_list <- unique(df1$common_name)
   
-  Ndep_range <- focal_data2 %>%
+  Ndep_range <- df %>%
     summarize(max_delta_Ndep = max(Dep_Ndelta, na.rm = TRUE),
               min_delta_Ndep = min(Dep_Ndelta, na.rm = TRUE),
               mean_delta_Ndep = mean(Dep_Ndelta, na.rm = TRUE),
@@ -104,49 +116,70 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
   
   plot_data <- left_join(df1, final_param_sum, by = join_by(common_name))
   
-  my.cols <- c("black cherry" = "brown",
-               "eastern cottonwood" = "red",
-               "paper birch" = "orange",
-               "ponderosa pine" = "yellow",
-               "quaking aspen" = "green",
-               "red spruce" = "blue",
-               "sugar maple" = "violet",
-               "yellow poplar" = "purple")
-  
-  plot_params <- plot_data %>%
-    select(-p3,-common_name) %>%
-    rename(ndep_baseline = mean_baseline_Ndep,
-           tree_agb_obs = mean_size) %>%
-    mutate(color = my.cols) 
+  my.cols <- colorblind_pal()(8)
+  names(my.cols) <- unique(df1$species)
     
-  
+  if(experiment_name == "new_delta_Ndep_only_saveTreeEffect"){
+    plot_params <- plot_data %>%
+      select(-common_name, -species, -mean_Dep_Sdelta, -mean_MAT_delta, -mean_MAP_delta_dm) %>%
+      rename(tree_agb_obs = mean_size,
+             ba_gt = mean_ba_gt) %>%
+      mutate(color = my.cols) 
+    
+    
   p1 <- ggplot(data = plot_params) +
     purrr::pmap(
       plot_params,
-      function(global_tree_effect,p4,ndep_baseline,p5,tree_agb_obs,p2,color) geom_function(data = plot_params,fun = function(x){
-        growth_baseline =  ((global_tree_effect + ndep_baseline*p4 + 0*p5) * tree_agb_obs ^ p2)
-        growth_delta =  ((global_tree_effect + ndep_baseline*p4 + x*p5) * tree_agb_obs ^ p2) 
+      function(global_tree_effect,p5,tree_agb_obs,p2,ba_gt,p3,color) geom_function(data = plot_params,fun = function(x){
+        growth_baseline =  ((global_tree_effect + 0*p5) * tree_agb_obs ^ p2) * exp(-ba_gt*p3)
+        growth_delta =  ((global_tree_effect + x*p5) * tree_agb_obs ^ p2) * exp(-ba_gt*p3) 
         y = growth_delta - growth_baseline
         return(y)
       }, col = color)
     ) +
-    xlim(-5,5) +
+    scale_x_reverse()+
+    xlim(0, min_delta_Ndep) +
     theme_bw() +
-    xlab("Delta N dep.") +
-    ylab("Delta growth")
+    xlab(expression(paste("N deposition change (kg N ", ha^-1," ",y^-1,")"))) +
+    ylab(expression(paste("growth (kg C ", y^-1," ",ind^-1,")")))
+  }
+  if(experiment_name == "delta_env_saveTreeEffect"){
+    
+    plot_params <- plot_data %>%
+      select(-common_name, -species) %>%
+      rename(tree_agb_obs = mean_size,
+             ba_gt = mean_ba_gt,
+             Dep_Sdelta = mean_Dep_Sdelta,
+             MAT_delta = mean_MAT_delta,
+             MAP_delta_dm = mean_MAP_delta_dm) %>%
+      mutate(color = my.cols) 
+    
+    p1 <- ggplot(data = plot_params) +
+      purrr::pmap(
+        plot_params,
+        function(global_tree_effect,p5,Dep_Sdelta,p6,MAT_delta,p7,MAP_delta_dm,p8,tree_agb_obs,p2,ba_gt, p3, color) geom_function(data = plot_params,fun = function(x){
+          growth_baseline =  ((global_tree_effect + 0*p5 + 0*p6 + 0*p7 + 0*p8) * tree_agb_obs ^ p2) * exp(-ba_gt*p3)
+          growth_delta =  ((global_tree_effect + x*p5 + 0*p6 + 0*p7 + 0*p8) * tree_agb_obs ^ p2) * exp(-ba_gt*p3)
+          y = growth_delta - growth_baseline
+          return(y)
+        }, col = color)
+      ) +
+      scale_x_reverse()+
+      xlim(0, min_delta_Ndep) +
+      theme_bw() +
+      xlab(expression(paste("N deposition decrease (kg N ", ha^-1," ",y^-1,")"))) +
+      ylab(expression(paste("growth (kg C ", y^-1," ",ind^-1,")")))
+  }
   p1
   
-  plot_params_legend <- plot_data %>%
-    select(-p3,) %>%
-    rename(ndep_baseline = mean_baseline_Ndep,
-           tree_agb_obs = mean_size) %>%
-    mutate(color = my.cols) 
+  plot_params_legend <- plot_data 
   
-  leg_p1_plot <- ggplot(data = plot_params_legend, aes(x = p4, y = p5,
-                                                  group = common_name, color = common_name))+
+  leg_p1_plot <- ggplot(data = plot_params_legend, aes(x = p2, y = p5,
+                                                  group = species, color = species))+
     geom_line()+
     theme_bw()+
-    scale_color_manual(values = my.cols)
+    scale_color_manual(values = my.cols)+
+    labs(color = "Species")
   
   # Extract the legend. Returns a gtable
   leg_p1 <- get_legend(leg_p1_plot)
@@ -158,12 +191,9 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
   p <- ggarrange(p1,leg,
                   ncol = 2,nrow = 1,
                   widths = c(1,0.3)
-  ) + bgcolor("white")
+  ) 
   
-  p
-  
-  ggsave(plot = p, filename = "./visualizations/delta_growth_vs_delta_Ndep.tif",
-         device = "tiff", height = 3, width = 6, units = "in")
+  return(p)
   
   message("all done!")
     

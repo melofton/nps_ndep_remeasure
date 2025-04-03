@@ -20,6 +20,8 @@ focal_df <- og_df %>%
          AG_carbon_m2, subp_BA_GT_m1, live_m2) 
 
 baseline_vars <- focal_df %>%
+  select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP) %>%
+  distinct(.) %>%
   group_by(plot_ID) %>%
   summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
             Dep_Noxibaseline = mean(Dep_Noxi, na.rm = TRUE),
@@ -60,9 +62,9 @@ df <- focal_df3 %>%
 
 total_species <- length(unique(df$common_name))
 
-sim <- "N_species"
+sim <- "new_delta_Ndep_only_saveTreeEffect"
 
-source("./modeling_code/linear_new_deltaNdep_only_individualAndPlotEffect.R")
+source("./modeling_code/linear_new_deltaNdep_only_saveTreeEffect.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
