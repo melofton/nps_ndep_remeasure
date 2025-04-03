@@ -1,4 +1,4 @@
-# Model results figure 2
+# Model results figure
 # Author: Mary Lofton
 # Date: 03APR25
 
