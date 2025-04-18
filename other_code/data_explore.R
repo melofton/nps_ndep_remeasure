@@ -7,6 +7,11 @@
 
 # load packages
 library(tidyverse)
+library(lubridate)
+library(sf)
+library(viridis)
+library(ggthemes)
+library(ggpubr)
 
 # load data
 df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE)
@@ -133,4 +138,169 @@ int4_trees <- df %>%
   group_by(common_name) %>%
   summarise(num_int4_trees = n())
 
+# additional maps to address collaborator questions 17APR25
 
+og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
+  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+#filter(common_name %in% c("eastern cottonwood"))
+
+focal_df <- og_df %>%
+  select(species, common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_Noxi, Dep_Nred, 
+         Dep_S, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
+         AG_carbon_m2, subp_BA_GT_m1, live_m2, lat, lon) 
+
+baseline_vars <- focal_df %>%
+  select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP) %>%
+  distinct(.) %>%
+  group_by(plot_ID) %>%
+  summarize(Dep_Nbaseline = mean(Dep_N, na.rm = TRUE),
+            Dep_Noxibaseline = mean(Dep_Noxi, na.rm = TRUE),
+            Dep_Nredbaseline = mean(Dep_Nred, na.rm = TRUE),
+            Dep_Sbaseline = mean(Dep_S, na.rm = TRUE),
+            MAT_baseline = mean(MAT, na.rm = TRUE),
+            MAP_baseline = mean(MAP, na.rm = TRUE)) %>%
+  ungroup()
+
+focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
+  group_by(plot_ID) %>%
+  mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
+         Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
+         Dep_Nreddelta = Dep_Nred - Dep_Nredbaseline,
+         Dep_Sdelta = Dep_S - Dep_Sbaseline,
+         MAP_delta_dm = (MAP - MAP_baseline) * 0.01,
+         MAT_delta = MAT - MAT_baseline) %>%
+  ungroup() 
+
+live_tree_ids <- focal_df2 |> 
+  summarise(count = n(),
+            sum = sum(live_m2), .by = tree_ID) |> 
+  dplyr::filter(count >= sum) |> 
+  pull(tree_ID)
+
+focal_df3 <- focal_df2 |> 
+  dplyr::filter(tree_ID %in% live_tree_ids) |> 
+  group_by(tree_ID) |> 
+  tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
+  ungroup() 
+
+df <- focal_df3 %>%
+  dplyr::filter(complete.cases(.)) %>%
+  group_by(tree_ID) %>%
+  mutate(num_intervals = max(interval_no, na.rm = TRUE)) %>%
+  ungroup() 
+
+species_guide <- df %>%
+  select(species, common_name) %>%
+  distinct(.)
+
+usa_coordinates <- map_data("state")
+map_data <- df %>%
+  select(plot_ID, lat, lon, Dep_Nbaseline, Dep_Sbaseline,
+         MAT_baseline, MAP_baseline, Dep_Noxibaseline, Dep_Nredbaseline,
+         num_intervals) %>%
+  mutate(MAP_baseline_dm = 0.01*MAP_baseline) %>%
+  distinct(.)
+
+my.cols <- colorblind_pal()(8)
+names(my.cols) <- unique(as.factor(df$num_intervals))
+
+all_int_map <- ggplot() +
+  geom_map(
+    data = usa_coordinates, map = usa_coordinates,
+    aes(long, lat, map_id = region),
+    color = "black", fill = "white")+
+  geom_point(
+    data = map_data,
+    aes(lon, lat, color = as.factor(num_intervals)),
+    shape = 16, alpha = 1, size = 1
+  ) +
+  scale_color_manual(values = my.cols)+
+  xlab("")+
+  ylab("")+
+  theme_classic()+
+  labs(color = "number of measurement intervals (re-measurements)")+
+  theme(legend.position = "bottom",
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank())
+all_int_map
+
+int_2_df <- map_data %>%
+  filter(num_intervals >= 2)
+
+int_2_map <- ggplot() +
+  geom_map(
+    data = usa_coordinates, map = usa_coordinates,
+    aes(long, lat, map_id = region),
+    color = "black", fill = "white")+
+  geom_point(
+    data = int_2_df,
+    aes(lon, lat, color = as.factor(num_intervals)),
+    shape = 16, alpha = 1, size = 1
+  ) +
+  scale_color_manual(values = my.cols)+
+  xlab("")+
+  ylab("")+
+  theme_classic()+
+  labs(color = "number of measurement intervals (re-measurements)")+
+  theme(legend.position = "bottom",
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank())
+int_2_map
+
+for(i in 1:length(species_guide$species)){
+  map_dat <- df %>%
+    filter(num_intervals >=2,
+           species == species_guide$species[i]) %>%
+    select(plot_ID, lat, lon, num_intervals, species) %>%
+    distinct(.)
+  
+  species_int_2_map <- ggplot() +
+    geom_map(
+      data = usa_coordinates, map = usa_coordinates,
+      aes(long, lat, map_id = region),
+      color = "black", fill = "white")+
+    geom_point(
+      data = map_dat,
+      aes(lon, lat, color = as.factor(num_intervals)),
+      shape = 16, alpha = 1, size = 1
+    ) +
+    scale_color_manual(values = my.cols)+
+    xlab("")+
+    ylab("")+
+    ggtitle(paste(species_guide$species[i],"(n sites = ",nrow(map_dat),")"))+
+    theme_classic()+
+    labs(color = "number of measurement intervals (re-measurements)")+
+    theme(legend.position = "bottom",
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank())
+  species_int_2_map
+  ggsave(species_int_2_map, filename = paste0("./visualizations/site_map_",species_guide$species[i],".png"),
+         device = "png")
+}
+
+# percent of sites vs. num remeasurements
+
+df %>%
+  select(plot_ID, num_intervals) %>%
+  distinct(.) %>%
+  count(num_intervals) %>% 
+  mutate(perc = n / sum(n) * 100) -> quick_df
+
+ggplot(quick_df, aes(x = num_intervals, y = perc)) + 
+  geom_bar(stat = "identity") +
+  theme_classic() +
+  ylab("percent of total plots in dataset") +
+  xlab("number of re-measurements (number of intervals)")
+  
