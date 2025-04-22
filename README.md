@@ -38,3 +38,20 @@
 
 **N_species**: modeling growth directly with a linear term for delta Ndep, with Ndep broken out into Ndep from oxidized and reduced forms of nitrogen; all other environmental variables are also included (S, temp, precip)
 
+**N_species_saveTreeEffect**: same as *N_species* model but saves all tree effects
+to permit assessment of model performance across all individuals
+
+**new_delta_Ndep_only_saveTreeEffect**: same as *new_delta_Ndep_only* but saves all tree effects to assessment of model performance across all individuals
+
+**delta_env_saveTreeEffect**: same as *delta_env* but saves all tree effects to permit assessment of model performance across all individuals
+
+**ozone**: modeling growth directly with a linear term for delta Ndep, which is calculated as the difference between Ndep during the current interval and Ndep averaged across all intervals for a plot, with Ndep broken out into Ndep from oxidized and reduced forms of nitrogen; delta terms for all other environmental variables are also included (S, temp, precip, and ozone)
+
+**unpacking_plot_effect**: same as *ozone* but includes terms for interval means
+of reduced and oxidized N deposition in addition to all the delta terms
+
+**historic_deviation**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a plot, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate; also saves tree effects and models N as two species, reduced and oxidized
+
+**historic_deviation_interaction**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a plot, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate, as well as a linear term for the interaction between the baseline and the deviation (beta* deviation * baseline); also saves tree effects and models N as two species, reduced and oxidized
+
+
