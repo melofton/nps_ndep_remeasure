@@ -132,13 +132,12 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
       plot_params,
       function(global_tree_effect,p5,tree_agb_obs,p2,ba_gt,p3,color) geom_function(data = plot_params,fun = function(x){
         growth_baseline =  ((global_tree_effect + 0*p5) * tree_agb_obs ^ p2) * exp(-ba_gt*p3)
-        growth_delta =  ((global_tree_effect + x*p5) * tree_agb_obs ^ p2) * exp(-ba_gt*p3) 
+        growth_delta =  ((global_tree_effect + x*p5) * tree_agb_obs ^ p2) * 1 #exp(-ba_gt*p3) 
         y = growth_delta - growth_baseline
         return(y)
       }, col = color)
     ) +
-    scale_x_reverse()+
-    xlim(0, min_delta_Ndep) +
+    xlim(min_delta_Ndep, 0) +
     theme_bw() +
     xlab(expression(paste("N deposition change (kg N ", ha^-1," ",y^-1,")"))) +
     ylab(expression(paste("growth (kg C ", y^-1," ",ind^-1,")")))
@@ -159,15 +158,14 @@ delta_growth_vs_delta_Ndep <- function(data = "./data/McDonnell_etal_InPrep_Tree
         plot_params,
         function(global_tree_effect,p5,Dep_Sdelta,p6,MAT_delta,p7,MAP_delta_dm,p8,tree_agb_obs,p2,ba_gt, p3, color) geom_function(data = plot_params,fun = function(x){
           growth_baseline =  ((global_tree_effect + 0*p5 + 0*p6 + 0*p7 + 0*p8) * tree_agb_obs ^ p2) * exp(-ba_gt*p3)
-          growth_delta =  ((global_tree_effect + x*p5 + 0*p6 + 0*p7 + 0*p8) * tree_agb_obs ^ p2) * exp(-ba_gt*p3)
+          growth_delta =  ((global_tree_effect + x*p5 + 0*p6 + 0*p7 + 0*p8) * tree_agb_obs ^ p2) * 1 #exp(-ba_gt*p3)
           y = growth_delta - growth_baseline
           return(y)
         }, col = color)
       ) +
-      scale_x_reverse()+
-      xlim(0, min_delta_Ndep) +
+      xlim(min_delta_Ndep, 0) +
       theme_bw() +
-      xlab(expression(paste("N deposition decrease (kg N ", ha^-1," ",y^-1,")"))) +
+      xlab(expression(paste("N deposition deviation (kg N ", ha^-1," ",y^-1,")"))) +
       ylab(expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))
   }
   p1

@@ -14,6 +14,7 @@ library(ggpubr)
 library(ggthemes)
 
 # delta growth vs delta Ndep
+source("./other_code/delta_growth_vs_delta_Ndep.R")
 p1 <- delta_growth_vs_delta_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
                            model_output_folder = "./experiments/new_delta_Ndep_only_saveTreeEffect",
                            experiment_name = "new_delta_Ndep_only_saveTreeEffect")
@@ -30,13 +31,21 @@ experiment_name = "delta_env_saveTreeEffect"
 ggsave(plot = p2, filename = paste0("./visualizations/delta_growth_vs_delta_Ndep-",experiment_name,".tif"),
        device = "tiff", height = 4, width = 6, units = "in",bg = "white")
 
+source("./other_code/marginal_effect_Ndep.R")
 p3 <- marginal_effect_Ndep(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv")
 p3
 ggsave(plot = p3, filename = "./visualizations/marginal_effect_Ndep.tif",
        device = "tiff", height = 8, width = 10, units = "in",bg = "white")
 
-p4 <- growth_vs_size(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                     model_output_folder = "./experiments/delta_env_saveTreeEffect")
+source("./other_code/marginal_effect_Ndep_species.R")
+p4 <- marginal_effect_Ndep_species(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv")
 p4
-ggsave(plot = p4, filename = "./visualizations/growth_vs_size.tif",
+ggsave(plot = p4, filename = "./visualizations/marginal_effect_Ndep_species.tif",
+       device = "tiff", height = 8, width = 10, units = "in",bg = "white")
+
+source("./other_code/growth_vs_size.R")
+p5 <- growth_vs_size(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
+                     model_output_folder = "./experiments/delta_env_saveTreeEffect")
+p5
+ggsave(plot = p5, filename = "./visualizations/growth_vs_size.tif",
        device = "tiff", height = 10, width = 10, units = "in",bg = "white")

@@ -65,10 +65,10 @@ for(i in 1:length(common_names)){
   params <- model_output[sample(nrow(model_output), 1000), ]
   
   pred_baseline <- ((params$global_tree_effect + 0*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8) 
-           * model_data$mean_size ^ params$p2) * exp(-model_data$mean_ba_gt*params$p3) 
+           * model_data$mean_size ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
   
   pred_decrease <- ((params$global_tree_effect + -1*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8) 
-                    * model_data$mean_size ^ params$p2) * exp(-model_data$mean_ba_gt*params$p3) 
+                    * model_data$mean_size ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
   
   growth_delta <- pred_decrease - pred_baseline
   
@@ -84,57 +84,52 @@ for(i in 1:length(common_names)){
 }
 
 
-# get model predictions for N_species (decrease of each one, respectively)
+# get model predictions for delta Ndep only 
 
-final_pred_Nspecies <- NULL
+final_pred_Ndep_only <- NULL
 
 for(i in 1:length(common_names)){
   model_data <- df1 %>% filter(common_name == common_names[i])
   model_output <- final1 %>% filter(spp_id == common_names[i],
-                                    model_id == "N_species_saveTreeEffect")
+                                    model_id == "new_delta_Ndep_only_saveTreeEffect")
   params <- model_output[sample(nrow(model_output), 1000), ]
   
-  pred_baseline <- ((params$global_tree_effect + 0*params$p4 + 0*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8) 
-                    * model_data$mean_size ^ params$p2) * exp(-model_data$mean_ba_gt*params$p3) 
+  pred_baseline <- ((params$global_tree_effect + 0*params$p5) 
+                    * model_data$mean_size ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
   
-  pred_decrease_Noxi <- ((params$global_tree_effect + -1*params$p4 + 0*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8) 
-                    * model_data$mean_size ^ params$p2) * exp(-model_data$mean_ba_gt*params$p3) 
+  pred_decrease <- ((params$global_tree_effect + -1*params$p5) 
+                    * model_data$mean_size ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
   
-  pred_decrease_Nred <- ((params$global_tree_effect + 0*params$p4 -1*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8) 
-                         * model_data$mean_size ^ params$p2) * exp(-model_data$mean_ba_gt*params$p3) 
-  
-  growth_delta_Noxi <- pred_decrease_Noxi - pred_baseline
-  growth_delta_Nred <- pred_decrease_Nred - pred_baseline
-  
-  pred_Noxi <- data.frame(species = model_data$species[1],
-                     model_id = paste0(model_output$model_id[1],"-Noxi"),
-                     pred = growth_delta_Noxi)
-  pred_Nred <- data.frame(species = model_data$species[1],
-                          model_id = paste0(model_output$model_id[1],"-Nred"),
-                          pred = growth_delta_Nred)
-  
-  pred <- bind_rows(pred_Noxi, pred_Nred)
+  growth_delta <- pred_decrease - pred_baseline
+
+  pred <- data.frame(species = model_data$species[1],
+                     model_id = model_output$model_id[1],
+                     pred = growth_delta)
   
   if(i == 1){
-    final_pred_Nspecies <- pred
+    final_pred_Ndep_only <- pred
   } else {
-    final_pred_Nspecies <- bind_rows(final_pred_Nspecies, pred)
+    final_pred_Ndep_only <- bind_rows(final_pred_Ndep_only, pred)
   }
 }
 
-final_pred <- bind_rows(final_pred_env, final_pred_Nspecies) %>%
-  mutate(model_label = ifelse(model_id == "delta_env_saveTreeEffect","all N",
-                              ifelse(model_id == "N_species_saveTreeEffect-Noxi","oxidized N","reduced N")))
+final_pred <- bind_rows(final_pred_env, final_pred_Ndep_only) %>%
+  mutate(model_label = ifelse(model_id == "delta_env_saveTreeEffect","N dep. + other env. variables","N dep. only"))
 
+plot_pred <- final_pred %>%
+  filter(model_label == "N dep. + other env. variables")
 
-p <- ggplot(data = final_pred)+
+my_col <- RColorBrewer::brewer.pal(3, "Blues")[3]
+
+p <- ggplot(data = plot_pred)+
   geom_density(aes(x = pred, group = model_label, 
                    color = model_label, fill = model_label),
                alpha = 0.5)+
   facet_wrap(facets = vars(species), scales = "free")+
   theme_bw()+
-  scale_color_brewer(palette = 1)+
-  scale_fill_brewer(palette = 1)+
+  scale_color_manual(values = my_col)+
+  scale_fill_manual(values = my_col)+
+  geom_vline(xintercept = 0)+
   labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))
 

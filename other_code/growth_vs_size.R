@@ -60,7 +60,7 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
                             p2,
                             p3,
                             ba_gt){
-    y =  ((global_tree_effect + ndep_delta*p5) * x ^ p2) * exp(-ba_gt*p3) 
+    y =  ((global_tree_effect + ndep_delta*p5) * x ^ p2) * 1 #exp(-ba_gt*p3) 
   }
   
   species_list <- sort(unique(df1$species))
