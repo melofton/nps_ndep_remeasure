@@ -82,7 +82,7 @@ df <- focal_df3 %>%
 
 total_species <- length(unique(df$common_name))
 
-sim <- "historic_deviation"
+sim <- "historic_deviation_interaction"
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation")){
 df <- focal_df3 %>%
@@ -92,7 +92,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/historic_deviation.R")
+source("./modeling_code/historic_deviation_interaction.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
