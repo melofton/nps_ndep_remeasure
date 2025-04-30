@@ -16,7 +16,7 @@ og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_c
 
 focal_df <- og_df %>%
   select(common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_N15, Dep_Noxi15, Dep_Nred15, Dep_Noxi, Dep_Nred, 
-         Dep_S, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
+         Dep_S, Dep_S15, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
          AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg) 
 
 baseline_vars <- focal_df %>%
@@ -34,7 +34,7 @@ baseline_vars <- focal_df %>%
 
 baseline_vars2 <- focal_df %>%
   select(plot_ID, date_m1, date_m2, Dep_N15, Dep_N, Dep_Noxi,
-         Dep_Noxi15, Dep_Nred, Dep_Nred15) %>%
+         Dep_Noxi15, Dep_Nred, Dep_Nred15, Dep_S, Dep_S15) %>%
   distinct(.) %>%
   group_by(plot_ID) %>%
   filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
@@ -43,8 +43,13 @@ baseline_vars2 <- focal_df %>%
   mutate(total_years = 15 + dt) %>%
   mutate(Dep_Nhistoric = (Dep_N15*total_years - Dep_N*dt) / 15,
          Dep_Noxihistoric = (Dep_Noxi15*total_years - Dep_Noxi*dt) / 15,
-         Dep_Nredhistoric = (Dep_Nred15*total_years - Dep_Nred*dt) / 15) %>%
-  select(plot_ID, Dep_Nhistoric, Dep_Noxihistoric, Dep_Nredhistoric)
+         Dep_Nredhistoric = (Dep_Nred15*total_years - Dep_Nred*dt) / 15,
+         Dep_Shistoric = (Dep_S15*total_years - Dep_S*dt) / 15) %>%
+  mutate(Dep_NpropBaseline = Dep_N / Dep_Nhistoric,
+         Dep_NoxipropBaseline = Dep_Noxi / Dep_Noxihistoric,
+         Dep_NredpropBaseline = Dep_Nred / Dep_Nredhistoric) %>%
+  select(plot_ID, Dep_Nhistoric, Dep_Noxihistoric, Dep_Nredhistoric, Dep_Shistoric,
+         Dep_NpropBaseline, Dep_NoxipropBaseline, Dep_NredpropBaseline)
 
 focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
   left_join(baseline_vars2, by = "plot_ID") %>%
@@ -58,7 +63,9 @@ focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
          Ozone_avg_delta = Ozone_avg - Ozone_avg_baseline,
          Dep_Ndiff = Dep_N - Dep_Nhistoric,
          Dep_Noxidiff = Dep_Noxi - Dep_Noxihistoric,
-         Dep_Nreddiff = Dep_Nred - Dep_Nredhistoric) %>%
+         Dep_Nreddiff = Dep_Nred - Dep_Nredhistoric,
+         Dep_Sdiff = Dep_S - Dep_Shistoric,
+         MAP_baseline_dm = MAP_baseline * 0.01) %>%
   ungroup() 
 
 live_tree_ids <- focal_df2 |> 
@@ -82,9 +89,10 @@ df <- focal_df3 %>%
 
 total_species <- length(unique(df$common_name))
 
-sim <- "historic_deviation_interaction"
+sim <- "baseline_prop_interaction"
 
-if(sim %in% c("historic_deviation_interaction","historic_deviation")){
+if(sim %in% c("historic_deviation_interaction","historic_deviation",
+              "historic_deviation_S")){
 df <- focal_df3 %>%
   dplyr::filter(complete.cases(.)) %>%
   group_by(tree_ID) %>%
@@ -92,7 +100,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/historic_deviation_interaction.R")
+source("./modeling_code/baseline_prop_interaction.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)

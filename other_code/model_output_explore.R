@@ -152,3 +152,156 @@ ggplot(data = final)+
   theme_classic()+
   ggtitle("Delta Ndep only")+
   xlim(c(-0.12, 0.12))
+
+# visualizing coefs for new terms added in 24APR25
+
+# for unpacking the plot effect experiment
+
+# list files
+out <- list.files("./experiments/unpacking_plot_effect",pattern = "mcmc.parquet",
+                  full.names = TRUE)
+
+for(i in 1:length(out)){
+  
+  spp_name = str_split(out[i], pattern = "-")[[1]][2]
+  model_name = str_split(out[i], pattern = "/")[[1]][3]
+  temp <- read_parquet(file = out[i]) %>%
+    mutate(spp_id = spp_name,
+           model_id = model_name)
+  
+  if(i == 1){
+    final <- temp
+  } else {
+    final <- bind_rows(final, temp)
+  }
+  
+}
+
+final <- final %>%
+  mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id))
+
+ggplot(data = final)+
+  geom_density(aes(x = p9, group = model_id, color = model_id, fill = model_id),
+               alpha = 0.5)+
+  theme_classic()+
+  facet_wrap(facets = vars(spp_id), scales = "free_y")+
+  xlab("ozone coefficient")+
+  geom_vline(xintercept = 0)+
+  ggtitle("")
+
+multi_params <- final %>%
+  select(-c(.chain,.iteration,.draw)) %>%
+  pivot_longer(p2:global_tree_effect, names_to = "param_name", 
+               values_to = "param_value")
+
+unpack_data1 <- multi_params %>%
+  filter(param_name %in% c("p4","p10")) %>%
+  mutate(param_name = ifelse(param_name == "p10","average","deviation"))
+
+ggplot(data = unpack_data1)+
+  geom_density(aes(x = param_value, group = param_name, color = param_name, fill = param_name),
+               alpha = 0.5)+
+  theme_classic()+
+  facet_wrap(facets = vars(spp_id), scales = "free_y")+
+  xlab("Noxi interval average and deviation coefficients")+
+  geom_vline(xintercept = 0)+
+  ggtitle("unpacking plot effect")
+
+unpack_data2 <- multi_params %>%
+  filter(param_name %in% c("p5","p11")) %>%
+  mutate(param_name = ifelse(param_name == "p11","average","deviation"))
+
+ggplot(data = unpack_data2)+
+  geom_density(aes(x = param_value, group = param_name, color = param_name, fill = param_name),
+               alpha = 0.5)+
+  theme_classic()+
+  facet_wrap(facets = vars(spp_id), scales = "free_y")+
+  xlab("Nred interval average and deviation coefficients")+
+  geom_vline(xintercept = 0)+
+  ggtitle("unpacking plot effect")
+
+# for historic deviation experiment
+
+# list files
+out <- list.files("./experiments/historic_deviation",pattern = "mcmc.parquet",
+                  full.names = TRUE)
+
+for(i in 1:length(out)){
+  
+  spp_name = str_split(out[i], pattern = "-")[[1]][2]
+  model_name = str_split(out[i], pattern = "/")[[1]][3]
+  temp <- read_parquet(file = out[i]) %>%
+    mutate(spp_id = spp_name,
+           model_id = model_name)
+  
+  if(i == 1){
+    final <- temp
+  } else {
+    final <- bind_rows(final, temp)
+  }
+  
+}
+
+final <- final %>%
+  mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id))
+
+multi_params <- final %>%
+  select(-c(.chain,.iteration,.draw)) %>%
+  pivot_longer(p2:global_tree_effect, names_to = "param_name", 
+               values_to = "param_value")
+
+unpack_data1 <- multi_params %>%
+  filter(param_name %in% c("p4","p6")) %>%
+  mutate(param_name = ifelse(param_name == "p4","baseline","difference"))
+
+ggplot(data = unpack_data1)+
+  geom_density(aes(x = param_value, group = param_name, color = param_name, fill = param_name),
+               alpha = 0.5)+
+  theme_classic()+
+  facet_wrap(facets = vars(spp_id), scales = "free_y")+
+  xlab("Noxi baseline and interval difference coefficients")+
+  geom_vline(xintercept = 0)+
+  ggtitle("historic deviation")
+
+ggplot(data = final)+
+  geom_point(aes(x = p4, y = p6))+
+  facet_wrap(facets = vars(spp_id), scales = "free")+
+  theme_bw()
+
+unpack_data2 <- multi_params %>%
+  filter(param_name %in% c("p5","p7")) %>%
+  mutate(param_name = ifelse(param_name == "p5","baseline","difference"))
+
+ggplot(data = unpack_data2)+
+  geom_density(aes(x = param_value, group = param_name, color = param_name, fill = param_name),
+               alpha = 0.5)+
+  theme_classic()+
+  facet_wrap(facets = vars(spp_id), scales = "free_y")+
+  xlab("Nred baseline and interval difference coefficients")+
+  geom_vline(xintercept = 0)+
+  ggtitle("historic deviation")
+
+ggplot(data = final)+
+  geom_point(aes(x = p5, y = p7))+
+  facet_wrap(facets = vars(spp_id), scales = "free")+
+  theme_bw()
+
+ggplot(data = final)+
+  geom_point(aes(x = p6, y = p7))+
+  facet_wrap(facets = vars(spp_id), scales = "free")+
+  theme_bw()
+
+# what do differences actually look like?
+
+ggplot(data = df)+
+  geom_density(aes(x = Dep_Noxidiff))+
+  facet_wrap(facets = vars(common_name), scales = "free_y")+
+  geom_vline(xintercept = 0, color = "red")+
+  theme_bw()
+
+ggplot(data = df)+
+  geom_density(aes(x = Dep_Nreddiff))+
+  facet_wrap(facets = vars(common_name), scales = "free_y")+
+  geom_vline(xintercept = 0, color = "red")+
+  theme_bw()
+
