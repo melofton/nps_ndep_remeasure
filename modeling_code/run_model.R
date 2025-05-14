@@ -65,7 +65,8 @@ focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
          Dep_Noxidiff = Dep_Noxi - Dep_Noxihistoric,
          Dep_Nreddiff = Dep_Nred - Dep_Nredhistoric,
          Dep_Sdiff = Dep_S - Dep_Shistoric,
-         MAP_baseline_dm = MAP_baseline * 0.01) %>%
+         MAP_baseline_dm = MAP_baseline * 0.01,
+         Dep_N_LTchange = Dep_Nbaseline - Dep_Nhistoric) %>%
   ungroup() 
 
 live_tree_ids <- focal_df2 |> 
@@ -89,7 +90,7 @@ df <- focal_df3 %>%
 
 total_species <- length(unique(df$common_name))
 
-sim <- "baseline_prop_interaction"
+sim <- "short-term_long-term"
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
               "historic_deviation_S")){
@@ -100,7 +101,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/baseline_prop_interaction.R")
+source("./modeling_code/short-term_long-term.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
