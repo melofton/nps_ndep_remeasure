@@ -675,23 +675,8 @@ p9 <- long_short_term_df %>%
          `p9_q97.5` = `q97.5`,
          `p9_q2.5` = `q2.5`) %>%
   select(-param_name)
-long_short_term_df2 <- full_join(p5, p9, by = c("spp_id"))
-
-ggplot(data = long_short_term_df2)+
-  geom_hline(yintercept = 0)+
-  geom_vline(xintercept = 0)+
-  geom_point(aes(x = p9_mean, y = p5_mean, col = spp_id))+
-  geom_segment(aes(x = p9_q2.5, y = p5_mean, xend = p9_q97.5, yend = p5_mean,
-                   col = spp_id))+
-  geom_segment(aes(y = p5_q2.5, x = p9_mean, yend = p5_q97.5, xend = p9_mean,
-                   col = spp_id))+
-  xlim(c(-0.2,0.2))+
-  ylim(c(-0.2,0.2))+
-  theme_bw()+
-  ylab("Coefficient on 'short-term' change in N dep")+
-  xlab("Coefficient on 'long-term' change N dep")
-
-# $$ figure: delta growth at different values of baseline N and delta N
+long_short_term_df2 <- full_join(p5, p9, by = c("spp_id")) %>%
+  mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id))
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
   dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
@@ -771,10 +756,91 @@ df <- focal_df3 %>%
   ungroup() %>%
   dplyr::filter(num_intervals >= 2)
 
+mean_data <- df %>%
+  select(common_name, AG_carbon_m1, subp_BA_GT_m1, Dep_Nhistoric) %>%
+  group_by(common_name) %>%
+  summarize_all(mean, na.rm = TRUE) %>%
+  mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name))
+
+mean_params <- final %>%
+  select(spp_id, p2:p10, global_tree_effect) %>%
+  group_by(spp_id) %>%
+  summarize_all(mean, na.rm = TRUE) %>%
+  mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id))
+
+species <- unique(long_short_term_df2$spp_id)
+
+pred_df <- matrix(nrow = 8, ncol = 7, data = NA)
+
+for(i in 1:length(species)){
+  
+  dat <- mean_data %>%
+    filter(common_name == species[i])
+  params <- mean_params %>%
+    filter(spp_id == species[i])
+  
+  delta_params <- long_short_term_df2 %>%
+    filter(spp_id == species[i])
+  message(species[i])
+  
+  for(j in 1:6){
+    
+    if(j %in% c(1:3)){
+      pred_no_change <- ((params$global_tree_effect + 0*delta_params[1,j+1] + dat$Dep_Nhistoric*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
+      pred_change <- ((params$global_tree_effect + -1*delta_params[1,j+1] + dat$Dep_Nhistoric*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
+      pred <- unlist((pred_change - pred_no_change))
+      pred_df[i,j+1] <- pred
+    }
+    else {
+      pred_no_change <- ((params$global_tree_effect + 0*delta_params[1,j+1] + dat$Dep_Nhistoric*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
+      pred_change <- ((params$global_tree_effect + -1*delta_params[1,j+1] + dat$Dep_Nhistoric*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
+      pred <- unlist((pred_change - pred_no_change))
+      pred_df[i,j+1] <- pred
+    }
+  }
+
+}
+
+pred_df[,1] <- species
+colnames(pred_df) <- colnames(long_short_term_df2)
+pred_df <- data.frame(pred_df) %>%
+  mutate_at(vars(p5_mean:`p9_q2.5`), as.numeric)
+
+ggplot(data = pred_df)+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point(aes(x = p9_mean, y = p5_mean, col = spp_id))+
+  geom_segment(aes(x = p9_q2.5, y = p5_mean, xend = p9_q97.5, yend = p5_mean,
+                   col = spp_id))+
+  geom_segment(aes(y = p5_q2.5, x = p9_mean, yend = p5_q97.5, xend = p9_mean,
+                   col = spp_id))+
+  xlim(c(-4,4))+
+  ylim(c(-4,4))+
+  theme_bw()+
+  ylab("Growth change given 1 kg ha^-1 yr^-1 N 'short-term' decrease")+
+  xlab("Growth change given 1 kg ha^-1 yr^-1 N 'long-term' decrease")
+
+ggplot(data = pred_df)+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point(aes(x = p9_mean, y = p5_mean, col = spp_id))+
+  geom_segment(aes(x = p9_q2.5, y = p5_mean, xend = p9_q97.5, yend = p5_mean,
+                   col = spp_id))+
+  geom_segment(aes(y = p5_q2.5, x = p9_mean, yend = p5_q97.5, xend = p9_mean,
+                   col = spp_id))+
+  xlim(c(-0.6,0.6))+
+  ylim(c(-0.6,0.6))+
+  theme_bw()+
+  ylab("Growth change given 1 kg ha^-1 yr^-1 N 'short-term' decrease")+
+  xlab("Growth change given 1 kg ha^-1 yr^-1 N 'long-term' decrease")
+
+# $$ figure: delta growth at different values of baseline N and long term delta N
+
+
 range(df$Dep_Nhistoric)
 # [1]  2.94734 33.29947
-range(df$diff)
-# [1] -13.44028  23.39295
+range(df$Dep_N_LTchange)
+# [1] -11.58009  15.08363
 
 ggplot(data = df)+
   geom_density(aes(x = Dep_N_LTchange), alpha = 0.5)+
@@ -783,26 +849,14 @@ ggplot(data = df)+
   geom_vline(xintercept = 0)+
   ggtitle("")
   
-
-mean_data <- df %>%
-  select(common_name, AG_carbon_m1, subp_BA_GT_m1) %>%
-  group_by(common_name) %>%
-  summarize_all(mean, na.rm = TRUE)
-
-mean_params <- final %>%
-  select(spp_id, p2:p9, global_tree_effect) %>%
-  group_by(spp_id) %>%
-  summarize_all(mean, na.rm = TRUE)
-
 baseline_Ndep_values = seq(2.0, 35.0, by = 0.1)
-delta_Ndep_values = seq(-14, 24, by = 0.1)
+delta_Ndep_values = seq(-12, 16, by = 0.1)
 
 pred_df <- data.frame(baseline_Ndep = rep(rep(baseline_Ndep_values, times = length(delta_Ndep_values)), times = 8),
                       delta_Ndep = rep(delta_Ndep_values, each = length(baseline_Ndep_values), times = 8),
                       spp_id = rep(unique(df$common_name), each = length(baseline_Ndep_values)*length(delta_Ndep_values))) %>%
-  mutate(prop_baseline = (delta_Ndep + baseline_Ndep) / baseline_Ndep) %>%
-  filter(prop_baseline >= 0.4 & prop_baseline <= 3) # this is to match the observed range
-range(pred_df$prop_baseline)
+  mutate(spp_id = ifelse(spp_id == "yellow-poplar","yellow poplar",spp_id)) %>%
+  filter(baseline_Ndep + delta_Ndep >= 0)
 
 species <- unique(pred_df$spp_id)
 
@@ -818,12 +872,12 @@ for(i in 1:length(species)){
   prop_baseline <- pred_df %>%
     filter(spp_id == species[i])
   message(species[i])
-  message(length(prop_baseline$prop_baseline))
+
+  pred_no_change <- ((params$global_tree_effect + 0*params$p9 + prop_baseline$baseline_Ndep*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
+  pred_change <- ((params$global_tree_effect + prop_baseline$delta_Ndep*params$p9 + prop_baseline$baseline_Ndep*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
   
-  pred_no_change <- ((params$global_tree_effect + 1*params$p9) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
-  pred_change <- ((params$global_tree_effect + prop_baseline$prop_baseline*params$p9) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
-  
-  prop_baseline$pred <- (pred_change - pred_no_change)
+  #prop_baseline$pred <- (pred_change - pred_no_change)
+  prop_baseline$pred <- pred_change
   
   if(i == 1){
     pred <- prop_baseline
@@ -843,8 +897,9 @@ for(i in 1:length(species)){
     filter(spp_id == species[i])
   
   plots[[i]] <- ggplot(data = plot_dat)+
-    geom_contour_filled(aes(x = baseline_Ndep, y = delta_Ndep, z = pred))+
+    geom_tile(aes(x = baseline_Ndep, y = delta_Ndep, fill = pred))+
     ggtitle(species[i])+
+    scale_fill_viridis_c()+
     theme_bw()
 }
 
@@ -858,17 +913,19 @@ ggsave(plot = money_plot, filename = "./visualizations/deltaGrowth_deltaN_baseli
 
 # same thing but for deviation
 
-range(df$Dep_Nbaseline)
-# [1]  2.781566 32.111455
+range(df$Dep_Nhistoric)
+# [1]  2.94734 33.29947
 range(df$Dep_Ndelta)
 # [1] -10.32194  11.39654
 
-mean_Ndep_values = seq(2.0, 33.0, by = 0.1)
+mean_Ndep_values = seq(2.0, 34.0, by = 0.1)
 dev_Ndep_values = seq(-11, 12, by = 0.1)
 
 pred_df2 <- data.frame(mean_Ndep = rep(rep(mean_Ndep_values, times = length(dev_Ndep_values)), times = 8),
                        dev_Ndep = rep(dev_Ndep_values, each = length(mean_Ndep_values), times = 8),
-                       spp_id = rep(unique(df$common_name), each = length(mean_Ndep_values)*length(dev_Ndep_values))) 
+                       spp_id = rep(unique(df$common_name), each = length(mean_Ndep_values)*length(dev_Ndep_values))) %>%
+  mutate(spp_id = ifelse(spp_id == "yellow-poplar","yellow poplar",spp_id)) %>%
+  filter(mean_Ndep + dev_Ndep >= 0)
 
 species2 <- unique(pred_df2$spp_id)
 
@@ -884,12 +941,12 @@ for(i in 1:length(species2)){
   N_dev <- pred_df2 %>%
     filter(spp_id == species2[i])
   message(species[i])
-  message(length(N_dev$dev_Ndep))
+
+  pred_no_change <- ((params$global_tree_effect + 0*params$p5 + N_dev$mean_Ndep*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
+  pred_change <- ((params$global_tree_effect + N_dev$dev_Ndep*params$p5 + N_dev$mean_Ndep*params$p10) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
   
-  pred_no_change <- ((params$global_tree_effect + 0*params$p5) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
-  pred_change <- ((params$global_tree_effect + N_dev$dev_Ndep*params$p5) * dat$AG_carbon_m1 ^ params$p2) * exp(-dat$subp_BA_GT_m1*params$p3)
-  
-  N_dev$pred <- (pred_change - pred_no_change)
+  #N_dev$pred <- (pred_change - pred_no_change)
+  N_dev$pred <- pred_change
   
   if(i == 1){
     pred2 <- N_dev
@@ -909,8 +966,9 @@ for(i in 1:length(species2)){
     filter(spp_id == species2[i])
   
   plots2[[i]] <- ggplot(data = plot_dat)+
-    geom_contour_filled(aes(x = mean_Ndep, y = dev_Ndep, z = pred))+
+    geom_tile(aes(x = mean_Ndep, y = dev_Ndep, fill = pred))+
     ggtitle(species[i])+
+    scale_fill_viridis_c()+
     theme_bw()
 }
 
