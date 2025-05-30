@@ -7,13 +7,31 @@
 source("./other_code/get_model_inputs.R")
 
 assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/N_species_saveTreeEffect",
-                        plot_title){
+                        model_output_folder = "./experiments/short-term_long-term",
+                        plot_title = ""){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
   out <- list.files(model_output_folder,pattern = "treeEffect.parquet",
                     full.names = TRUE)
+  
+  if(grep("short-term_long-term",model_output_folder)){
+    for(i in 1:length(out)){
+      
+      spp_name = str_split(out[i], pattern = "-")[[1]][6]
+      model_name = str_split(out[i], pattern = "/")[[1]][3]
+      temp <- read_parquet(file = out[i]) %>%
+        mutate(spp_id = spp_name,
+               model_id = model_name)
+      
+      if(i == 1){
+        final <- temp
+      } else {
+        final <- bind_rows(final, temp)
+      }
+      
+    }
+  } else {
   
   for(i in 1:length(out)){
     
@@ -32,6 +50,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
       final <- bind_rows(final, temp)
     }
     
+  }
   }
   
   final <- final %>%
@@ -96,6 +115,9 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   }
   if(grep("N_species",model_output_folder)){
     df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Noxidelta*p4 + Dep_Nreddelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
+  }
+  if(grep("short-term_long-term",model_output_folder)){
+    df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_N_LTchange*p9 + Dep_Nhistoric*p10) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) )
   }
   
   rsq <- function(pred, obs){

@@ -17,8 +17,8 @@ library(ggthemes)
 
 source("./other_code/assess_model_performance.R")
 p1 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                               model_output_folder = "./experiments/delta_env_saveTreeEffect",
-                               plot_title = "Model with all environmental variables")
+                               model_output_folder = "./experiments/short-term_long-term",
+                               plot_title = "")
 p1$plot1
 p1$plot2
 ggsave(plot = p1$plot1, filename = "./visualizations/model_skill_delta_env.tif",
