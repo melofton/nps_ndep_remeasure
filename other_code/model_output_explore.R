@@ -908,7 +908,7 @@ money_plot <- ggarrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5
                         labels = c("A","B","C","D","E","F","G","H")
 )
 money_plot
-ggsave(plot = money_plot, filename = "./visualizations/deltaGrowth_deltaN_baselineN.tif",
+ggsave(plot = money_plot, filename = "./visualizations/deltaGrowth_deltaN_baselineN_tile.tif",
        device = "tiff", height = 10, width = 14, units = "in",bg = "white")
 
 # same thing but for deviation
