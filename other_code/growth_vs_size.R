@@ -7,7 +7,7 @@
 source("./other_code/get_model_inputs.R")
 
 growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/delta_env_saveTreeEffect"){
+                        model_output_folder = "./experiments/short-term_long-term"){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
@@ -16,7 +16,7 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
   
   for(i in 1:length(out)){
     
-    model_name = str_split(out[i], pattern = "-")[[1]][2]
+    model_name = str_split(out[i], pattern = "-")[[1]][6]
     temp <- read_parquet(file = out[i]) %>%
       mutate(model_id = model_name)
     
@@ -41,7 +41,7 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
     rename(common_name = model_id) 
   
   final_param_sum <- param_sum %>% 
-    select(common_name, global_tree_effect:p8)
+    select(common_name, global_tree_effect:p9)
   
   ## READ IN AND WRANGLE DATA
   df <- get_model_inputs(data)
@@ -50,17 +50,20 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
     group_by(common_name, species) %>%
     summarize(min_size = min(AG_carbon_m1, na.rm = TRUE),
               max_size = max(AG_carbon_m1, na.rm = TRUE),
-              mean_ba_gt = mean(subp_BA_GT_m1, na.rm = TRUE)) %>%
+              mean_ba_gt = mean(subp_BA_GT_m1, na.rm = TRUE),
+              ndep_historic = mean(Dep_Nhistoric, na.rm = TRUE)) %>%
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name))
   
   growth_v_size <- function(global_tree_effect,
                             ndep_delta,
+                            ndep_historic,
                             p5,
                             x,
                             p2,
                             p3,
+                            p10,
                             ba_gt){
-    y =  ((global_tree_effect + ndep_delta*p5) * x ^ p2) * 1 #exp(-ba_gt*p3) 
+    y =  ((global_tree_effect + ndep_delta*p5 + ndep_historic*p10) * x ^ p2) * 1 #exp(-ba_gt*p3) 
   }
   
   species_list <- sort(unique(df1$species))
@@ -84,23 +87,29 @@ growth_vs_size <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10
       geom_function(fun = growth_v_size, args = list(global_tree_effect = current_species_params$global_tree_effect,
                                                      ba_gt = current_species_data$mean_ba_gt,
                                                      ndep_delta = 0,
+                                                     ndep_historic = current_species_data$ndep_historic,
                                                      p2 = current_species_params$p2,
                                                      p3 = current_species_params$p3,
-                                                     p5 = current_species_params$p5),
+                                                     p5 = current_species_params$p5,
+                                                     p10 = current_species_params$p10),
                     aes(col = "baseline N dep.")) +
       geom_function(fun = growth_v_size, args = list(global_tree_effect = current_species_params$global_tree_effect,
                                                      ba_gt = current_species_data$mean_ba_gt,
                                                      ndep_delta = -1,
+                                                     ndep_historic = current_species_data$ndep_historic,
                                                      p2 = current_species_params$p2,
                                                      p3 = current_species_params$p3,
-                                                     p5 = current_species_params$p5),
+                                                     p5 = current_species_params$p5,
+                                                     p10 = current_species_params$p10),
                     aes(col = "marginal N dep. decrease"))+
       geom_function(fun = growth_v_size, args = list(global_tree_effect = current_species_params$global_tree_effect,
                                                      ba_gt = current_species_data$mean_ba_gt,
                                                      ndep_delta = 1,
+                                                     ndep_historic = current_species_data$ndep_historic,
                                                      p2 = current_species_params$p2,
                                                      p3 = current_species_params$p3,
-                                                     p5 = current_species_params$p5),
+                                                     p5 = current_species_params$p5,
+                                                     p10 = current_species_params$p10),
                     aes(col = "marginal N dep. increase"))+
       scale_color_manual(values = c("baseline N dep." = "black",
                                     "marginal N dep. decrease" = "blue",

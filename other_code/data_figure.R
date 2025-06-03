@@ -297,7 +297,7 @@ fig1_d <- ggplot() +
     aes(lon, lat, color = Dep_N_LTchange),
     shape = 16, alpha = 1, size = 1
   ) +
-  scale_color_viridis(option = "B")+
+  scale_color_viridis(option = "D")+
   xlab("")+
   ylab("")+
   theme_classic()+

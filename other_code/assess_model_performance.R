@@ -20,9 +20,14 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
       
       spp_name = str_split(out[i], pattern = "-")[[1]][6]
       model_name = str_split(out[i], pattern = "/")[[1]][3]
-      temp <- read_parquet(file = out[i]) %>%
-        mutate(spp_id = spp_name,
-               model_id = model_name)
+      iters <- sample(c(1:3000),100)
+      
+      temp <- read_parquet(file = out[i], as_data_frame = FALSE,col_select = c("n","tree_effect",".iteration")) |>
+        filter(.iteration %in% iters) |>
+        select(-.iteration) |>
+        collect() |>
+        mutate(model_id = model_name,
+               spp_id = spp_name)
       
       if(i == 1){
         final <- temp
@@ -42,7 +47,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
       filter(.iteration %in% iters) |>
       select(-.iteration) |>
       collect() |>
-      mutate(model_id = model_name)
+      mutate(spp_id = model_name)
     
     if(i == 1){
       final <- temp
@@ -54,17 +59,35 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   }
   
   final <- final %>%
-    mutate(model_id = ifelse(model_id == "yellow","yellow poplar",model_id))
+    mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id))
   
   tree_effects <- final %>%
-    group_by(model_id, n) %>%
+    group_by(spp_id, n) %>%
     summarize(mean_tree_effect = mean(tree_effect, na.rm = TRUE)) %>%
     rename(tree_index = n,
-           common_name = model_id)
+           common_name = spp_id)
   
   # list files
   out1 <- list.files(model_output_folder,pattern = "mcmc.parquet",
                     full.names = TRUE)
+  
+  if(grep("short-term_long-term",model_output_folder)){
+    
+    for(i in 1:length(out1)){
+    
+    model_name = str_split(out1[i], pattern = "-")[[1]][6]
+    
+    temp <- read_parquet(file = out1[i]) %>%
+      mutate(model_id = model_name)
+    
+    if(i == 1){
+      final1 <- temp
+    } else {
+      final1 <- bind_rows(final1, temp)
+    }
+    }
+    
+  } else {
   
   for(i in 1:length(out1)){
     
@@ -79,6 +102,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
       final1 <- bind_rows(final1, temp)
     }
     
+  }
   }
   
   final1 <- final1 %>%
@@ -110,12 +134,15 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
     left_join(tree_effects, by = join_by(common_name, tree_index)) |>
     left_join(final_param_sum, by = join_by(common_name)) 
   
-  if(grep("delta_env",model_output_folder)){
-    df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
-  }
-  if(grep("N_species",model_output_folder)){
-    df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Noxidelta*p4 + Dep_Nreddelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
-  }
+  # if(grep("delta_env",model_output_folder)){
+  #   df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
+  # } 
+  # if(grep("N_species",model_output_folder)){
+  #   df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Noxidelta*p4 + Dep_Nreddelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
+  # }
+  # error
+  # Error in if (grep("delta_env", model_output_folder)) { :                              
+  #     argument is of length zero
   if(grep("short-term_long-term",model_output_folder)){
     df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_N_LTchange*p9 + Dep_Nhistoric*p10) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) )
   }

@@ -11,7 +11,7 @@ get_model_inputs <- function(data){
   focal_df <- og_df %>%
     select(common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_N15, Dep_Noxi15, Dep_Nred15, Dep_Noxi, Dep_Nred, 
            Dep_S, Dep_S15, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
-           AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg) 
+           AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg, species) 
   
   baseline_vars <- focal_df %>%
     select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, Ozone_avg) %>%

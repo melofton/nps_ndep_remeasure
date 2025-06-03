@@ -16,14 +16,15 @@ library(ggthemes)
 
 
 source("./other_code/assess_model_performance.R")
+
 p1 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
                                model_output_folder = "./experiments/short-term_long-term",
                                plot_title = "")
 p1$plot1
 p1$plot2
-ggsave(plot = p1$plot1, filename = "./visualizations/model_skill_delta_env.tif",
+ggsave(plot = p1$plot1, filename = "./visualizations/model_skill_short-term_long-term.tif",
        device = "tiff", height = 5, width = 10, units = "in",bg = "white")
-ggsave(plot = p1$plot2, filename = "./visualizations/pred_vs_obs_delta_env.tif",
+ggsave(plot = p1$plot2, filename = "./visualizations/pred_vs_obs_short-term_long-term.tif",
        device = "tiff", height = 10, width = 10, units = "in",bg = "white")
 
 p2 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
