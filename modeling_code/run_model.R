@@ -19,6 +19,60 @@ focal_df <- og_df %>%
          Dep_S, Dep_S15, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
          AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg) 
 
+cumsum_vars <- focal_df %>%
+  select(plot_ID, date_m1, date_m2, Dep_N, Dep_N15, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, Ozone_avg) %>%
+  distinct(.) %>%
+  arrange(plot_ID, date_m1) %>%
+  group_by(plot_ID) %>%
+  mutate(dt = as.numeric(date_m2 - date_m1)/365,
+         interval = row_number()) %>%
+  ungroup()
+
+interval_ndep <- cumsum_vars %>%
+  select(plot_ID, interval, Dep_N) %>%
+  group_by(plot_ID) %>%
+  pivot_wider(names_from = interval, values_from = Dep_N) %>%
+  ungroup()
+colnames(interval_ndep) <- c("plot_ID","depn_1","depn_2","depn_3","depn_4")
+
+interval_dt <- cumsum_vars %>%
+  select(plot_ID, interval, dt) %>%
+  group_by(plot_ID) %>%
+  pivot_wider(names_from = interval, values_from = dt) %>%
+  ungroup()
+colnames(interval_dt) <- c("plot_ID","dt_1","dt_2","dt_3","dt_4")
+
+plot_ante <- focal_df %>%
+  select(plot_ID, date_m1, date_m2, Dep_N15, Dep_N) %>%
+  distinct(.) %>%
+  group_by(plot_ID) %>%
+  filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
+  arrange(plot_ID) %>%
+  mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
+  mutate(total_years = 15 + dt) %>%
+  mutate(Dep_Nhistoric = (Dep_N15*total_years - Dep_N*dt) / 15) %>%
+  select(plot_ID, Dep_Nhistoric) %>%
+  ungroup()
+
+cumsum_vars2 <- left_join(interval_ndep, interval_dt, by = "plot_ID") %>%
+  left_join(plot_ante, by = "plot_ID") %>%
+  mutate(wgt_avg_1 = Dep_Nhistoric,
+         wgt_avg_2 = (Dep_Nhistoric*15 + depn_1*dt_1)/(15 + dt_1),
+         wgt_avg_3 = (Dep_Nhistoric*15 + depn_1*dt_1 + depn_2*dt_2)/(15 + dt_1 + dt_2),
+         wgt_avg_4 = (Dep_Nhistoric*15 + depn_1*dt_1 + depn_2*dt_2 + depn_3*dt_3)/(15 + dt_1 + dt_2 + dt_3)) %>%
+  select(plot_ID, wgt_avg_1, wgt_avg_2, wgt_avg_3, wgt_avg_4) %>%
+  group_by(plot_ID) %>%
+  pivot_longer(wgt_avg_1:wgt_avg_4, names_to = "interval_temp",values_to = "Dep_N_wgt_avg_to_date") %>%
+  ungroup() %>%
+  filter(!is.na(Dep_N_wgt_avg_to_date)) %>%
+  separate(interval_temp, into = c(NA,NA,"interval"), sep = "_") %>%
+  mutate(interval = as.numeric(interval))
+
+cumsum_vars3 <- left_join(cumsum_vars, cumsum_vars2, by = c("plot_ID","interval")) %>%
+  mutate(Dep_Ndeviation = Dep_N - Dep_N_wgt_avg_to_date) %>%
+  select(plot_ID, interval, Dep_N_wgt_avg_to_date, Dep_Ndeviation) %>%
+  rename(interval_no = interval)
+
 baseline_vars <- focal_df %>%
   select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, Ozone_avg) %>%
   distinct(.) %>%
@@ -53,6 +107,7 @@ baseline_vars2 <- focal_df %>%
 
 focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
   left_join(baseline_vars2, by = "plot_ID") %>%
+  left_join(cumsum_vars3, by = c("plot_ID","interval_no")) %>%
   group_by(plot_ID) %>%
   mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
          Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
@@ -90,7 +145,7 @@ df <- focal_df3 %>%
 
 total_species <- length(unique(df$common_name))
 
-sim <- "short-term_long-term"
+sim <- "space_vs_time"
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
               "historic_deviation_S")){
@@ -101,7 +156,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/short-term_long-term.R")
+source("./modeling_code/space_vs_time.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
