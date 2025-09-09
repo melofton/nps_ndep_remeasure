@@ -1,0 +1,44 @@
+model {
+
+  global_tree_effect ~ dunif(-10,10)
+  tau_global ~ dunif(0.0001,10)
+  tau_plot ~ dunif(0.0001,10)
+  procErr ~ dunif(0.0001,10)
+  p2 ~ dunif(0,2) 
+  p3 ~ dunif(0,100) #Sample in log space
+  p5 ~ dnorm(0,0.001)
+  p6 ~ dnorm(0,0.001)
+  p7 ~ dnorm(0,0.001)
+  p8 ~ dnorm(0,0.001)
+  p9 ~ dnorm(0,0.001)
+  #p10 ~ dnorm(0,0.001)
+  #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
+  #p5inv2 ~ dexp(0.001)  
+  #p6 ~ dunif(min_temp*0.5, max_temp*2)
+  #p7 ~ dunif(0.3, 20)  
+  #p8 ~ dunif(min_precip*0.5, max_precip*2)
+  #p9 ~ dunif(0.3, 20)   
+  #p10 ~ dunif(min_sdep*0.5, max_sdep*2)
+  #p10 ~ dunif(min_sdep, max_sdep*2)
+  #p11 ~ dunif(0.3, 10)    
+  
+  for(p in 1:n_plots){
+    plot_effect[p] ~ dnorm(global_tree_effect, tau_global)
+  }
+
+  for(n in 1:ntrees){
+    # tree_effect[n] ~ dnorm(global_tree_effect, tau_global)
+    tree_effect[n] ~ dnorm(plot_effect[plot_index[n]], tau_plot)
+  }
+  
+  for(t in 1:n_measures){
+
+    tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_dev[t]*p5 + sdep_delta[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8 + ndep_wgt_avg[t]*p9 )
+    * tree_agb_obs[t] ^ p2) 
+        * exp(-ba_gt[t]*p3)  
+
+    tree_growth_obs[t] ~ dnorm(tree_growth_mean[t], procErr)
+
+  }
+
+  }  
