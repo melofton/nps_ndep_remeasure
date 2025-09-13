@@ -122,9 +122,19 @@ run_model <- function(k, df, sim){
 
     tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_dev[t]*p5 + sdep_delta[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8 + ndep_wgt_avg[t]*p9 )
     * tree_agb_obs[t] ^ p2) 
-        * exp(-ba_gt[t]*p3)  
+        * exp(-ba_gt[t]*p3)  # add one here if go logged route b/c if you are the biggest tree it would be 0 and therefore undefined
+    
+    # log_tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_dev[t]*p5 + sdep_delta[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8 + ndep_wgt_avg[t]*p9 ) #if on log scale would interpret these in terms of multiplicative change
+    # + p2*log_tree_agb_obs[t]) 
+    #     - p3*log(1 + ba_gt[t]) # how much do we want to penalize the log growth based on basal area
+    # log beforehand b/c a little computationally quicker
 
-    tree_growth_obs[t] ~ dnorm(tree_growth_mean[t], procErr)
+    tree_growth_obs[t] ~ dnorm(tree_growth_mean[t], procErr) # consider t distribution
+    # could model this as normal w/ lambda paramter modeled as gamma
+    # gamma has two parameters determined by nu
+    # prior on nu is exponential and bounded at 2; if it goes to infinity you basically
+    # have a normal distribution
+    # if JAGS grumps at truncation could hack with a uniform distibution bounded at 2 and some very large number
 
   }
 

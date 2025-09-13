@@ -10,6 +10,8 @@ library(tidybayes)
 library(bayesplot)
 library(furrr)
 
+mem.maxVSize(vsize = Inf)
+
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
   #filter(common_name %in% c("eastern cottonwood"))
@@ -20,58 +22,101 @@ focal_df <- og_df %>%
          AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg) 
 
 cumsum_vars <- focal_df %>%
-  select(plot_ID, date_m1, date_m2, Dep_N, Dep_N15, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, Ozone_avg) %>%
+  select(date_m1, date_m2, Dep_N, Dep_N15, tree_ID, interval_no) %>%
   distinct(.) %>%
-  arrange(plot_ID, date_m1) %>%
-  group_by(plot_ID) %>%
-  mutate(dt = as.numeric(date_m2 - date_m1)/365,
-         interval = row_number()) %>%
-  ungroup()
+  arrange(tree_ID, date_m1) %>%
+  mutate(dt = as.numeric(date_m2 - date_m1)/365) 
+
+hist(cumsum_vars$dt, main = "Length of measurement intervals (yrs)",
+     xlab = "years")
 
 interval_ndep <- cumsum_vars %>%
-  select(plot_ID, interval, Dep_N) %>%
-  group_by(plot_ID) %>%
-  pivot_wider(names_from = interval, values_from = Dep_N) %>%
+  select(tree_ID, interval_no, Dep_N) %>%
+  group_by(tree_ID) %>%
+  pivot_wider(names_from = interval_no, values_from = Dep_N) %>%
   ungroup()
-colnames(interval_ndep) <- c("plot_ID","depn_1","depn_2","depn_3","depn_4")
+colnames(interval_ndep) <- c("tree_ID","depn_1","depn_2","depn_3","depn_4")
 
 interval_dt <- cumsum_vars %>%
-  select(plot_ID, interval, dt) %>%
-  group_by(plot_ID) %>%
-  pivot_wider(names_from = interval, values_from = dt) %>%
+  select(tree_ID, interval_no, dt) %>%
+  group_by(tree_ID) %>%
+  pivot_wider(names_from = interval_no, values_from = dt) %>%
   ungroup()
-colnames(interval_dt) <- c("plot_ID","dt_1","dt_2","dt_3","dt_4")
+colnames(interval_dt) <- c("tree_ID","dt_1","dt_2","dt_3","dt_4")
 
 plot_ante <- focal_df %>%
-  select(plot_ID, date_m1, date_m2, Dep_N15, Dep_N) %>%
+  select(tree_ID, interval_no, date_m1, date_m2, Dep_N15, Dep_N) %>%
   distinct(.) %>%
-  group_by(plot_ID) %>%
-  filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
-  arrange(plot_ID) %>%
+  group_by(tree_ID) %>%
+  filter(interval_no == 1) %>%
+  arrange(tree_ID) %>%
   mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
   mutate(total_years = 15 + dt) %>%
   mutate(Dep_Nhistoric = (Dep_N15*total_years - Dep_N*dt) / 15) %>%
-  select(plot_ID, Dep_Nhistoric) %>%
+  select(tree_ID, Dep_Nhistoric) %>%
   ungroup()
 
-cumsum_vars2 <- left_join(interval_ndep, interval_dt, by = "plot_ID") %>%
-  left_join(plot_ante, by = "plot_ID") %>%
+cumsum_vars2 <- left_join(interval_ndep, interval_dt, by = "tree_ID") %>%
+  left_join(plot_ante, by = "tree_ID") %>%
   mutate(wgt_avg_1 = Dep_Nhistoric,
          wgt_avg_2 = (Dep_Nhistoric*15 + depn_1*dt_1)/(15 + dt_1),
          wgt_avg_3 = (Dep_Nhistoric*15 + depn_1*dt_1 + depn_2*dt_2)/(15 + dt_1 + dt_2),
          wgt_avg_4 = (Dep_Nhistoric*15 + depn_1*dt_1 + depn_2*dt_2 + depn_3*dt_3)/(15 + dt_1 + dt_2 + dt_3)) %>%
-  select(plot_ID, wgt_avg_1, wgt_avg_2, wgt_avg_3, wgt_avg_4) %>%
-  group_by(plot_ID) %>%
+  select(tree_ID, wgt_avg_1, wgt_avg_2, wgt_avg_3, wgt_avg_4) %>%
+  group_by(tree_ID) %>%
   pivot_longer(wgt_avg_1:wgt_avg_4, names_to = "interval_temp",values_to = "Dep_N_wgt_avg_to_date") %>%
   ungroup() %>%
   filter(!is.na(Dep_N_wgt_avg_to_date)) %>%
-  separate(interval_temp, into = c(NA,NA,"interval"), sep = "_") %>%
-  mutate(interval = as.numeric(interval))
+  separate(interval_temp, into = c(NA,NA,"interval_no"), sep = "_") %>%
+  mutate(interval_no = as.numeric(interval_no))
 
-cumsum_vars3 <- left_join(cumsum_vars, cumsum_vars2, by = c("plot_ID","interval")) %>%
+cumsum_vars3 <- left_join(cumsum_vars, cumsum_vars2, by = c("tree_ID","interval_no")) %>%
   mutate(Dep_Ndeviation = Dep_N - Dep_N_wgt_avg_to_date) %>%
-  select(plot_ID, interval, Dep_N_wgt_avg_to_date, Dep_Ndeviation) %>%
-  rename(interval_no = interval)
+  select(tree_ID, interval_no, Dep_N_wgt_avg_to_date, Dep_Ndeviation) %>%
+  filter(complete.cases(.)) 
+
+#### orthogonalization code - have to run this on ARC
+for(i in 1:max(cumsum_vars3$interval_no)){
+  
+  print(i)
+  
+  test <- cumsum_vars3 %>%
+    filter(interval_no == i) %>%
+    group_by(Dep_Ndeviation, Dep_N_wgt_avg_to_date) %>%
+    mutate(group_id = cur_group_id())
+  
+  current_dat <- test %>%
+    select(group_id, Dep_Ndeviation, Dep_N_wgt_avg_to_date) %>%
+    distinct(.)
+  
+  S <- current_dat %>%
+    pull(Dep_Ndeviation)
+
+  L <- current_dat %>%
+    pull(Dep_N_wgt_avg_to_date)
+
+  n = length(S)
+
+  X = cbind(1, S) # design matrix needs to include intercept [1, S]
+  Phat = X %*% solve(t(X) %*% X, t(X)) # projection onto span{1,S}
+  M = diag(n) - Phat
+  O_proj = as.numeric(M %*% L)
+
+  current_dat$Dep_N_wgt_avg_to_date_ortho <- O_proj
+  
+  test2 <- left_join(test, current_dat, by = c("group_id", "Dep_Ndeviation", "Dep_N_wgt_avg_to_date"))
+
+  if(i == 1){
+    final <- test2
+  } else {
+    final <- bind_rows(final, test2)
+  }
+
+}
+
+cumsum_vars4 <- final %>%
+  rename(ortho_group_id = group_id)
+####
 
 baseline_vars <- focal_df %>%
   select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, Ozone_avg) %>%
@@ -107,7 +152,7 @@ baseline_vars2 <- focal_df %>%
 
 focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
   left_join(baseline_vars2, by = "plot_ID") %>%
-  left_join(cumsum_vars3, by = c("plot_ID","interval_no")) %>%
+  left_join(cumsum_vars4, by = c("tree_ID","interval_no")) %>%
   group_by(plot_ID) %>%
   mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
          Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
@@ -141,14 +186,16 @@ df <- focal_df3 %>%
   group_by(tree_ID) %>%
   mutate(num_intervals = max(interval_no, na.rm = TRUE)) %>%
   ungroup() %>%
-  dplyr::filter(num_intervals >= 2)
+  dplyr::filter(num_intervals >= 1)
+
+# write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
 total_species <- length(unique(df$common_name))
 
-sim <- "space_vs_time"
+sim <- "ss_space_vs_time"
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
-              "historic_deviation_S")){
+              "historic_deviation_S","ss_space_vs_time")){
 df <- focal_df3 %>%
   dplyr::filter(complete.cases(.)) %>%
   group_by(tree_ID) %>%
@@ -156,7 +203,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/space_vs_time.R")
+source("./modeling_code/ss_space_vs_time.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)

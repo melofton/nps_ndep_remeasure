@@ -111,7 +111,7 @@ run_model <- function(k, df, sim){
   }
 
   ssData   <- list(tree_agb_obs = tree_matrix,
-                   ntrees = length(tree_index), 
+                   ntrees = length(trees_index), 
                    n_plots = length(plot_index),
                    n_measures = n_measures,
                    ba_gt = ba_gt,

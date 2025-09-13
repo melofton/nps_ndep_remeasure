@@ -53,3 +53,5 @@ SQLite_FIADB_ENTIRE.db
 .DS_Store
 McDonnell*
 *treeEffect.parquet
+processed_data.csv
+na_cec_eco_l1
