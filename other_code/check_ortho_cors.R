@@ -8,47 +8,50 @@
 # read in processed data
 processed_dat <- read_csv("./data/processed_data.csv")
 
-# read in ecoregions
-ecoregions <- read_csv("./data/plot_ecoregions.csv") 
-
 # join dataframes
-dat <- left_join(processed_dat, ecoregions, by = c("plot_ID")) %>%
-  select(level1_ecoregion, interval_no, Dep_Ndeviation, Dep_N_wgt_avg_to_date_ortho) %>%
-  distinct()
+dat <- processed_dat %>%
+  select(ecoregion_ortho, plot_ID, Dep_Nhistoric_ortho, Dep_Ndiff_ortho, Dep_Shistoric, Dep_Sdiff) %>%
+  distinct(.)
 
 # check correlation by interval only - should be 0!
-interval_cor <- dat %>%
-  group_by(interval_no) %>%
-  summarize(n = n(),
-            correlation = cor(Dep_Ndeviation, Dep_N_wgt_avg_to_date_ortho))
 
 # check correlation by ecoregion and interval
-regions <- unique(ecoregions$level1_ecoregion)
-intervals <- c(1:4)
+regions <- unique(dat$ecoregion_ortho)[!is.na(unique(dat$ecoregion_ortho))]
 
-final_df <- data.frame(ecoregion = rep(regions, each = 4),
-                       interval = rep(intervals, times = length(unique(ecoregions$level1_ecoregion))),
+final_df <- data.frame(ecoregion = regions,
                        n = NA,
-                       cor = NA)
-row = 1
+                       cor_astar_n_rtilde_n = NA,
+                       cor_astar_n_r_s = NA,
+                       cor_astar_n_a_s = NA,
+                       cor_rtilde_n_r_s = NA,
+                       cor_rtilde_n_a_s = NA)
 
 for(i in 1:length(regions)){
   
-  for(j in 1:max(intervals)){
   current_dat <- dat %>%
-    filter(level1_ecoregion == regions[i] & interval_no == intervals[j]) 
-  current_cor <- cor(current_dat$Dep_Ndeviation, current_dat$Dep_N_wgt_avg_to_date_ortho)
-  final_df$n[row] <- length(current_dat$Dep_Ndeviation)
-  final_df$cor[row] <- current_cor
-  if(length(current_dat$Dep_Ndeviation) > 0){
-    p <- ggplot(data = current_dat, aes(x = Dep_Ndeviation, y = Dep_N_wgt_avg_to_date_ortho))+
-      geom_point()+
-      ggtitle(paste(regions[i],intervals[j]))
-    plot_name <- paste0("./visualizations/corr_plots/",regions[i],"_",intervals[j],".png")
-    ggsave(p, filename = plot_name, device = "png")
-  }
-  row = row + 1
-  }
+    filter(ecoregion_ortho == regions[i]) 
+  
+  current_cor_astar_n_rtilde_n <- cor(current_dat$Dep_Nhistoric_ortho, current_dat$Dep_Ndiff_ortho)
+  current_cor_astar_n_r_s <- cor(current_dat$Dep_Nhistoric_ortho, current_dat$Dep_Sdiff)
+  current_cor_astar_n_a_s <- cor(current_dat$Dep_Nhistoric_ortho, current_dat$Dep_Shistoric)
+  current_cor_rtilde_n_r_s <- cor(current_dat$Dep_Ndiff_ortho, current_dat$Dep_Sdiff)
+  current_cor_rtilde_n_a_s <- cor(current_dat$Dep_Ndiff_ortho, current_dat$Dep_Shistoric)
+  
+  final_df$n[i] <- length(current_dat$Dep_Ndiff_ortho)
+  final_df$cor_astar_n_rtilde_n[i] <- current_cor_astar_n_rtilde_n
+  final_df$cor_astar_n_r_s[i] <- current_cor_astar_n_r_s
+  final_df$cor_astar_n_a_s[i] <- current_cor_astar_n_a_s
+  final_df$cor_rtilde_n_r_s[i] <- current_cor_rtilde_n_r_s
+  final_df$cor_rtilde_n_a_s[i] <- current_cor_rtilde_n_a_s
+  
+  # if(length(current_dat$Dep_Ndeviation) > 0){
+  #   p <- ggplot(data = current_dat, aes(x = Dep_Ndeviation, y = Dep_N_wgt_avg_to_date_ortho))+
+  #     geom_point()+
+  #     ggtitle(paste(regions[i],intervals[j]))
+  #   plot_name <- paste0("./visualizations/corr_plots/",regions[i],"_",intervals[j],".png")
+  #   ggsave(p, filename = plot_name, device = "png")
+  # }
+  
 }
 
 write.csv(final_df, "./data/ortho_correlations_by_ecoregion.csv",row.names = FALSE)
