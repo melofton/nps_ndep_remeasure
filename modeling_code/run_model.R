@@ -39,7 +39,7 @@ baseline_vars2 <- focal_df %>%
          Dep_Noxi15, Dep_Nred, Dep_Nred15, Dep_S, Dep_S15) %>%
   distinct(.) %>%
   group_by(plot_ID) %>%
-  filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
+  dplyr::filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
   arrange(plot_ID) %>%
   mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
   mutate(total_years = 15 + dt) %>%
@@ -87,26 +87,26 @@ for(i in 1:length(reg)){
   if(i == 9) next
   
   current_dat <- focal_df3 %>%
-    filter(level1_ecoregion == reg[i]) %>%
+    dplyr::filter(level1_ecoregion == reg[i]) %>%
     select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
     distinct(.) %>%
-    filter(complete.cases(.)) %>%
+    dplyr::filter(complete.cases(.)) %>%
     mutate(ecoregion_ortho = reg[i])
   
   if(i == 2){
     current_dat <- focal_df3 %>%
-      filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[5]) %>%
+      dplyr::filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[5]) %>%
       select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
       distinct(.) %>%
-      filter(complete.cases(.)) %>%
+      dplyr::filter(complete.cases(.)) %>%
       mutate(ecoregion_ortho = paste(reg[i],reg[5],sep = " & "))
   }
   if(i == 8){
     current_dat <- focal_df3 %>%
-      filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[9]) %>%
+      dplyr::filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[9]) %>%
       select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
       distinct(.) %>%
-      filter(complete.cases(.)) %>%
+      dplyr::filter(complete.cases(.)) %>%
       mutate(ecoregion_ortho = paste(reg[i],reg[9],sep = " & "))
   }
   
@@ -171,7 +171,7 @@ df <- focal_df5 %>%
 
 #write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
-df <- read_csv("./data/processed_data.csv")
+#df <- read_csv("./data/processed_data.csv")
 
 total_species <- length(unique(df$common_name))
 
