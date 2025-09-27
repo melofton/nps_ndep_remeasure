@@ -292,15 +292,15 @@ for(i in 1:length(species_guide$species)){
 
 # percent of sites vs. num remeasurements
 
-df %>%
+quick_df <- read_csv("./data/processed_data.csv") %>%
   select(plot_ID, num_intervals) %>%
   distinct(.) %>%
   count(num_intervals) %>% 
-  mutate(perc = n / sum(n) * 100) -> quick_df
+  mutate(perc = n / sum(n) * 100) 
 
 ggplot(quick_df, aes(x = num_intervals, y = perc)) + 
   geom_bar(stat = "identity") +
   theme_classic() +
   ylab("percent of total plots in dataset") +
-  xlab("number of re-measurements (number of intervals)")
+  xlab("number of measurement intervals)")
   

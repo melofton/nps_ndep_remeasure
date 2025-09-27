@@ -65,8 +65,15 @@ us_ecoregions <- na_ecoregions %>%
 
 # For a more robust filtering, you might consider merging with state boundaries.
 # Here's an example to isolate US ecoregion parts more directly:
-us_boundaries <- ne_states(country = "United States of America", returnclass = "sf")
-us_ecoregions_sf <- st_intersection(na_ecoregions, us_boundaries)
+us_boundaries <- ne_states(country = "United States of America", returnclass = "sf") %>%
+  filter(!iso_3166_2 == "US-AK")
+crs_us <- st_crs(us_boundaries)
+crs_na <- st_crs(na_ecoregions)
+us_sf_transformed <- st_transform(us_boundaries, crs = crs_na)
+us_ecoregions_sf <- st_intersection(na_ecoregions, us_sf_transformed)
+
+plots <- read_csv("./data/plot_ecoregions.csv") %>%
+  filter(!level1_ecoregion %in% c("WATER",NA))
 
 plotting_points <- st_as_sf(plots,
                          coords = c("lon", "lat"),
@@ -75,7 +82,7 @@ plotting_points <- st_as_sf(plots,
 # Create the plot
 ggplot() +
   # Add the ecoregions layer, using the ecoregion name for the fill color
-  geom_sf(data = na_ecoregions, aes(fill = NA_L1NAME), color = "white", linewidth = 0.1) +
+  geom_sf(data = us_ecoregions_sf, aes(fill = NA_L1NAME), color = "white", linewidth = 0.1) +
   geom_sf(data = plotting_points, aes(fill = level1_ecoregion), color = "black", shape = 21) +
   # Set the title and remove axis labels
   labs(
