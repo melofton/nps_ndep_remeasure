@@ -22,10 +22,10 @@ p1 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_202
                                plot_title = "")
 p1$plot1
 p1$plot2
-ggsave(plot = p1$plot1, filename = "./visualizations/model_skill_short-term_long-term.tif",
+ggsave(plot = p1$plot1, filename = "./visualizations/model_skill_space_vs_time_ortho.tif",
        device = "tiff", height = 5, width = 10, units = "in",bg = "white")
-ggsave(plot = p1$plot2, filename = "./visualizations/pred_vs_obs_short-term_long-term.tif",
-       device = "tiff", height = 10, width = 10, units = "in",bg = "white")
+ggsave(plot = p2$plot2, filename = "./visualizations/pred_vs_obs_space_vs_time_ortho.tif",
+       device = "tiff", height = 8, width = 8, units = "in",bg = "white")
 
 p2 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
                                model_output_folder = "./experiments/N_species_saveTreeEffect",

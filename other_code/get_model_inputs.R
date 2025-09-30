@@ -2,6 +2,8 @@
 # Author: Mary Lofton
 # Date: 03APR25
 
+mem.maxVSize(vsize = Inf)
+
 get_model_inputs <- function(data){
   ## READ IN AND WRANGLE DATA
   og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
@@ -11,7 +13,7 @@ get_model_inputs <- function(data){
   focal_df <- og_df %>%
     select(common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_N15, Dep_Noxi15, Dep_Nred15, Dep_Noxi, Dep_Nred, 
            Dep_S, Dep_S15, MAT, MAP, date_m2, date_m1, AG_carbon_pYear, AG_carbon_m1, 
-           AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg, species) 
+           AG_carbon_m2, subp_BA_GT_m1, live_m2, Ozone_avg) 
   
   baseline_vars <- focal_df %>%
     select(plot_ID, date_m1, date_m2, Dep_N, Dep_Noxi, Dep_Nred, Dep_S, MAT, MAP, Ozone_avg) %>%
@@ -31,7 +33,7 @@ get_model_inputs <- function(data){
            Dep_Noxi15, Dep_Nred, Dep_Nred15, Dep_S, Dep_S15) %>%
     distinct(.) %>%
     group_by(plot_ID) %>%
-    filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
+    dplyr::filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
     arrange(plot_ID) %>%
     mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
     mutate(total_years = 15 + dt) %>%
@@ -63,24 +65,103 @@ get_model_inputs <- function(data){
            Dep_N_LTchange = Dep_Nbaseline - Dep_Nhistoric) %>%
     ungroup() 
   
-  live_tree_ids <- focal_df2 |> 
+  # read in ecoregion info 
+  ecoreg <- read_csv("./data/plot_ecoregions.csv")
+  
+  focal_df3 <- left_join(focal_df2, ecoreg, by = c("plot_ID"))
+  
+  reg <- unique(ecoreg$level1_ecoregion)[!is.na(unique(ecoreg$level1_ecoregion))]
+  
+  #### orthogonalization code 
+  for(i in 1:length(reg)){
+    
+    print(reg[i])
+    
+    if(i == 5) next
+    if(i == 9) next
+    
+    current_dat <- focal_df3 %>%
+      dplyr::filter(level1_ecoregion == reg[i]) %>%
+      select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
+      distinct(.) %>%
+      dplyr::filter(complete.cases(.)) %>%
+      mutate(ecoregion_ortho = reg[i])
+    
+    if(i == 2){
+      current_dat <- focal_df3 %>%
+        dplyr::filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[5]) %>%
+        select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
+        distinct(.) %>%
+        dplyr::filter(complete.cases(.)) %>%
+        mutate(ecoregion_ortho = paste(reg[i],reg[5],sep = " & "))
+    }
+    if(i == 8){
+      current_dat <- focal_df3 %>%
+        dplyr::filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[9]) %>%
+        select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
+        distinct(.) %>%
+        dplyr::filter(complete.cases(.)) %>%
+        mutate(ecoregion_ortho = paste(reg[i],reg[9],sep = " & "))
+    }
+    
+    r_s <- current_dat %>%
+      pull(Dep_Sdiff)
+    
+    a_s <- current_dat %>%
+      pull(Dep_Shistoric)
+    
+    r_n <- current_dat %>%
+      pull(Dep_Ndiff)
+    
+    a_n <- current_dat %>%
+      pull(Dep_Nhistoric)
+    
+    n_s = length(r_s)
+    n_n = length(r_n)
+    
+    S = cbind(1, r_s, a_s) # design matrix needs to include intercept [1, S]
+    P_s = diag(n_s) - (S %*% solve(t(S) %*% S, t(S))) # projection onto span{1,S}
+    rtilde_n = as.numeric(P_s %*% r_n)
+    atilde_n = as.numeric(P_s %*% a_n)
+    
+    P_n = diag(n_n) - (rtilde_n %*% solve(t(rtilde_n) %*% rtilde_n, t(rtilde_n)))
+    
+    astar_n = as.numeric(P_n %*% atilde_n)
+    
+    current_dat$Dep_Nhistoric_ortho = astar_n
+    current_dat$Dep_Ndiff_ortho = rtilde_n
+    
+    if(i == 1){
+      final <- current_dat
+    } else {
+      final <- bind_rows(final, current_dat)
+    }
+    
+  }
+  
+  focal_df4 <- left_join(focal_df3, final, by = c("plot_ID","level1_ecoregion","Dep_Shistoric","Dep_Sdiff",          
+                                                  "Dep_Nhistoric","Dep_Ndiff"))
+  
+  ####
+  
+  live_tree_ids <- focal_df4 |> 
     summarise(count = n(),
               sum = sum(live_m2), .by = tree_ID) |> 
     dplyr::filter(count >= sum) |> 
     pull(tree_ID)
   
-  focal_df3 <- focal_df2 |> 
+  focal_df5 <- focal_df4 |> 
     dplyr::filter(tree_ID %in% live_tree_ids) |> 
     group_by(tree_ID) |> 
     tidyr::fill(subp_BA_GT_m1, .direction = "down") |> 
     ungroup() 
   
-  df <- focal_df3 %>%
+  df <- focal_df5 %>%
     dplyr::filter(complete.cases(.)) %>%
     group_by(tree_ID) %>%
     mutate(num_intervals = max(interval_no, na.rm = TRUE)) %>%
     ungroup() %>%
-    dplyr::filter(num_intervals >= 2)
+    dplyr::filter(num_intervals >= 1)
   
   return(df)
 }

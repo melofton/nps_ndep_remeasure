@@ -4,10 +4,10 @@
 
 # Purpose: calculate model predictions using JAGS model output and compare to observations
 
-source("./other_code/get_model_inputs.R")
+#source("./other_code/get_model_inputs.R")
 
 assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/short-term_long-term",
+                        model_output_folder = "./experiments/space_vs_time_ortho",
                         plot_title = ""){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
@@ -15,7 +15,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   out <- list.files(model_output_folder,pattern = "treeEffect.parquet",
                     full.names = TRUE)
   
-  if(grep("short-term_long-term",model_output_folder)){
+  if(!length(grep("short-term_long-term",model_output_folder)) == 0){
     for(i in 1:length(out)){
       
       spp_name = str_split(out[i], pattern = "-")[[1]][6]
@@ -42,6 +42,8 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
     
     model_name = str_split(out[i], pattern = "-")[[1]][2]
     iters <- sample(c(1:3000),100)
+    
+    message(model_name)
     
     temp <- read_parquet(file = out[i], as_data_frame = FALSE,col_select = c("n","tree_effect",".iteration")) |>
       filter(.iteration %in% iters) |>
@@ -121,7 +123,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   
   
   ## READ IN AND WRANGLE DATA
-  df <- get_model_inputs(data) 
+  df <- read_csv("./data/processed_data.csv")
   
   trees_index <- df |> 
     group_by(common_name) |> 
@@ -143,20 +145,32 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   # error
   # Error in if (grep("delta_env", model_output_folder)) { :                              
   #     argument is of length zero
-  if(grep("short-term_long-term",model_output_folder)){
+  if(!length(grep("short-term_long-term",model_output_folder)) == 0){
     df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_N_LTchange*p9 + Dep_Nhistoric*p10) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) )
+  }
+  if(!length(grep("space_vs_time_ortho",model_output_folder)) == 0){
+    df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndiff_ortho*p5 + Dep_Sdiff*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_Nhistoric_ortho*p9 + Dep_Shistoric*p10) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) )
   }
   
   rsq <- function(pred, obs){
     1 - (sum((obs - pred)^2, na.rm = TRUE) / sum((obs - mean(obs, na.rm = TRUE))^2, na.rm = TRUE))
   }
   
-  mod_assess <- df1 %>%
-    group_by(common_name, species) %>%
+  mod_assess0 <- df1 %>%
+    group_by(common_name) %>%
     summarize(r2 = rsq(pred = pred, obs = AG_carbon_pYear),
               rmse = sqrt(mean((AG_carbon_pYear - pred)^2, na.rm = TRUE)),
               mae = mean(abs(pred - AG_carbon_pYear), na.rm = TRUE))
-
+  
+  spp_df <- read_csv(data) %>%
+    dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
+    select(species, common_name) %>%
+    distinct(.) %>%
+    mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) 
+  
+  mod_assess <- left_join(mod_assess0, spp_df, by = "common_name")
+  df2 <- left_join(df1, spp_df, by = "common_name")
+    
   r2 <- ggplot(mod_assess, aes(x=reorder(species, r2), y=r2, color=as.factor(species))) + 
     geom_point() +
     geom_segment(aes(x=species,xend=species,y=0,yend=r2)) +
@@ -192,12 +206,12 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   p1 <- annotate_figure(p1, top = text_grob(plot_title, 
                                         color = "black", face = "bold", size = 14))
   
-  p2 <- ggplot(data = df1)+
+  p2 <- ggplot(data = df2)+
     geom_point(aes(x = AG_carbon_pYear, y = pred))+
     geom_abline(slope = 1)+
     theme_bw()+
     theme(legend.position = "none")+
-    ggtitle("Displaying repeated measures")+
+    #ggtitle("Displaying repeated measures")+
     facet_wrap(facets = vars(species), scales = "free")
   
   return(list(df = mod_assess, plot1 = p1, plot2 = p2))
