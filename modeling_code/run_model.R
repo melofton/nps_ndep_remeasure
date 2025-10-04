@@ -133,9 +133,13 @@ for(i in 1:length(reg)){
   P_n = diag(n_n) - (rtilde_n %*% solve(t(rtilde_n) %*% rtilde_n, t(rtilde_n)))
   
   astar_n = as.numeric(P_n %*% atilde_n)
+  
+  c0 = (t(rtilde_n) %*% atilde_n) / (t(rtilde_n) %*% rtilde_n)
+  c = c0[1,]
 
   current_dat$Dep_Nhistoric_ortho = astar_n
   current_dat$Dep_Ndiff_ortho = rtilde_n
+  current_dat$c = c
 
   if(i == 1){
     final <- current_dat
@@ -171,11 +175,11 @@ df <- focal_df5 %>%
 
 #write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
-#df <- read_csv("./data/processed_data.csv")
+df <- read_csv("./data/processed_data.csv")
 
 total_species <- length(unique(df$common_name))
 
-sim <- "space_vs_time_ortho_log_t"
+sim <- "space_vs_time_ortho_log_interaction"
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
               "historic_deviation_S","ss_space_vs_time")){
@@ -186,7 +190,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/space_vs_time_ortho_log_t.R")
+source("./modeling_code/space_vs_time_ortho_log_interaction.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)

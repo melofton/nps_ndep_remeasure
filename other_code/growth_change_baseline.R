@@ -1,22 +1,25 @@
 # Tree growth given long-term change and historic baseline
 # Author: Mary Lofton
-# Date: 02JUN25
+# Date: 02OCT25
 
 # Purpose: plot tree growth given different levels of long-term change in N deposition
 # and historic baseline values
 
-source("./other_code/get_model_inputs.R")
-
 growth_change_baseline <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv",
-                                     model_output_folder = "./experiments/short-term_long-term",
-                                   temporal_scale = "longterm"){
+                                     model_output_folder = "./experiments/space_vs_time_ortho"){
   
   # get data
-  df <- get_model_inputs(data)
+  df <- read_csv("./data/processed_data.csv")
   
-  focal_data <- df %>%
+  # get species
+  spp_df <- read_csv(data) %>%
+    dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
+    select(species, common_name) %>%
+    distinct(.)
+  
+  focal_data <- left_join(df, spp_df, by = "common_name") %>%
     select(common_name, species, Dep_Nhistoric,
-           Dep_N_LTchange, Dep_Ndelta) %>%
+           Dep_Ndiff) %>%
     mutate(spp_id = ifelse(common_name == "yellow-poplar","yellow poplar",common_name))
   
   mean_data <- df %>%
@@ -35,20 +38,20 @@ growth_change_baseline <- function(data = "./data/McDonnell_etal_InPrep_TreeData
     curr_dat <- focal_data %>%
       filter(species == spp_list[i])
     
-    min_Nbaseline <- min(curr_dat$Dep_Nhistoric, na.rm = TRUE)
-    max_Nbaseline <- max(curr_dat$Dep_Nhistoric, na.rm = TRUE)
-    min_Ndelta <- min(curr_dat$Dep_N_LTchange, na.rm = TRUE)
-    max_Ndelta <- max(curr_dat$Dep_N_LTchange, na.rm = TRUE)
+    min_Nhistoric <- min(curr_dat$Dep_Nhistoric, na.rm = TRUE)
+    max_Nhistoric <- max(curr_dat$Dep_Nhistoric, na.rm = TRUE)
+    min_Ndiff <- min(curr_dat$Dep_Ndiff, na.rm = TRUE)
+    max_Ndiff <- max(curr_dat$Dep_Ndiff, na.rm = TRUE)
 
-    baseline_Ndep_values = seq(min_Nbaseline, max_Nbaseline, by = 0.1)
-    delta_Ndep_values = seq(min_Ndelta, max_Ndelta, by = 0.1)
+    ante_Ndep_values = seq(min_Nhistoric, max_Nhistoric, by = 0.1)
+    rec_Ndep_values = seq(min_Ndiff, max_Ndiff, by = 0.1)
     
-    temp <- data.frame(baseline_Ndep = rep(baseline_Ndep_values, times = length(delta_Ndep_values)),
-                           delta_Ndep = rep(delta_Ndep_values, each = length(baseline_Ndep_values)),
+    temp <- data.frame(ante_Ndep = rep(ante_Ndep_values, times = length(rec_Ndep_values)),
+                           rec_Ndep = rep(rec_Ndep_values, each = length(ante_Ndep_values)),
                            species = spp_list[i],
                        spp_id = curr_dat$common_name[1]) %>%
       mutate(spp_id = ifelse(spp_id == "yellow-poplar","yellow poplar",spp_id)) %>%
-      filter(baseline_Ndep + delta_Ndep >= 0)
+      filter(ante_Ndep + rec_Ndep >= 0)
     
     if(i == 1){
       N_ranges <- temp
@@ -64,7 +67,7 @@ growth_change_baseline <- function(data = "./data/McDonnell_etal_InPrep_TreeData
   
   for(i in 1:length(out)){
     
-    spp_name = str_split(out[i], pattern = "-")[[1]][6]
+    spp_name = str_split(out[i], pattern = "-")[[1]][2]
     model_name = str_split(out[i], pattern = "/")[[1]][3]
     temp <- read_parquet(file = out[i]) %>%
       mutate(spp_id = spp_name,
