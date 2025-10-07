@@ -26,7 +26,7 @@ run_model <- function(k, df, sim){
     mutate(log_AG_carbon_pYear = log(AG_carbon_pYear + 2093.9),
            log_AG_carbon_m1 = log(AG_carbon_m1),
            log_subp_BA_GT_m1 = log(subp_BA_GT_m1 + 1)) #|>
-   # slice(c(1:100))
+    #slice(c(1:100))
   
   log_mean_annual_avg_growth <- df1$log_AG_carbon_pYear
   log_start_measures <- df1$log_AG_carbon_m1
@@ -62,9 +62,8 @@ run_model <- function(k, df, sim){
   global_tree_effect ~ dunif(-10,10)
   tau_global ~ dunif(0.0001,10)
   tau_plot ~ dunif(0.0001,10)
-  procErr ~ dunif(0.0001,10) # consider using a gamma here and for other tau parameters
-  lambda ~ dgamma(nu/2, nu/2)
-  nu ~ dunif(2, 10000000) # to avoid difficulty with truncated exponential distribution
+  procErr ~ dgamma(1,1) # consider using a gamma here and for other tau parameters
+  nu ~ dexp(1/30) T(2,) # truncated exponential
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) 
   p5 ~ dnorm(0,0.001)
@@ -88,7 +87,9 @@ run_model <- function(k, df, sim){
      + p2*log_tree_agb_obs[t]) 
          - p3*log_ba_gt[t] # how much do we want to penalize the log growth based on basal area
 
-    log_tree_growth_obs[t] ~ dnorm(log_tree_growth_mean[t], procErr*lambda) # multiplied b/c JAGS uses precision
+    lambda[t] ~ dgamma(nu/2, nu/2)
+
+    log_tree_growth_obs[t] ~ dnorm(log_tree_growth_mean[t], procErr*lambda[t]) # multiplied b/c JAGS uses precision
   
   }
 
