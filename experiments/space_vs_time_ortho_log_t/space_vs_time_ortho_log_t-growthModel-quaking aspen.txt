@@ -1,0 +1,57 @@
+model {
+
+  global_tree_effect ~ dunif(-10,10)
+  tau_global ~ dunif(0.0001,10)
+  tau_plot ~ dunif(0.0001,10)
+  procErr ~ dunif(0.0001,10) # this should be gamma
+  lambda ~ dgamma(nu/2, nu/2)
+  nu ~ dunif(2, 10000000) # to avoid difficulty with truncated exponential distribution
+  p2 ~ dunif(0,2) 
+  p3 ~ dunif(0,100) #Sample in log space
+  p5 ~ dnorm(0,0.001)
+  p6 ~ dnorm(0,0.001)
+  p7 ~ dnorm(0,0.001)
+  p8 ~ dnorm(0,0.001)
+  p9 ~ dnorm(0,0.001)
+  p10 ~ dnorm(0,0.001)
+  #lp4 ~ dunif(log(min_ndep), log(max_ndep*2))
+  #p5inv2 ~ dexp(0.001)  
+  #p6 ~ dunif(min_temp*0.5, max_temp*2)
+  #p7 ~ dunif(0.3, 20)  
+  #p8 ~ dunif(min_precip*0.5, max_precip*2)
+  #p9 ~ dunif(0.3, 20)   
+  #p10 ~ dunif(min_sdep*0.5, max_sdep*2)
+  #p10 ~ dunif(min_sdep, max_sdep*2)
+  #p11 ~ dunif(0.3, 10)    
+  
+  for(p in 1:n_plots){
+    plot_effect[p] ~ dnorm(global_tree_effect, tau_global)
+  }
+
+  for(n in 1:ntrees){
+    # tree_effect[n] ~ dnorm(global_tree_effect, tau_global)
+    tree_effect[n] ~ dnorm(plot_effect[plot_index[n]], tau_plot)
+  }
+  
+  for(t in 1:n_measures){
+
+    #tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_diff[t]*p5 + sdep_diff[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8 + ndep_historic[t]*p9 + sdep_historic[t]*p10)
+    #* tree_agb_obs[t] ^ p2) 
+    #    * exp(-ba_gt[t]*p3)  # add one here if go logged route b/c if you are the biggest tree it would be 0 and therefore undefined
+    
+     log_tree_growth_mean[t] <-  ((tree_effect[tree_index[t]] + ndep_diff[t]*p5 + sdep_diff[t]*p6 + mat_delta[t]*p7 + map_delta_dm[t]*p8 + ndep_historic[t]*p9 + sdep_historic[t]*p10) #if on log scale would interpret these in terms of multiplicative change
+     + p2*log_tree_agb_obs[t]) 
+         - p3*log_ba_gt[t] # how much do we want to penalize the log growth based on basal area
+    # log beforehand b/c a little computationally quicker
+
+    log_tree_growth_obs[t] ~ dnorm(log_tree_growth_mean[t], procErr*lambda) # consider t distribution
+    # t distribution has one parameter, degrees of freedom, which is nu
+    # could model this as normal w/ lambda paramter modeled as gamma
+    # gamma has two parameters determined by nu --> this no longer makes sense to me 01 oct 25
+    # prior on nu is exponential and bounded at 2; if it goes to infinity you basically
+    # have a normal distribution
+    # if JAGS grumps at truncation could hack with a uniform distibution bounded at 2 and some very large number
+
+  }
+
+  }  

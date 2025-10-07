@@ -175,7 +175,7 @@ df <- focal_df5 %>%
 
 #write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
-df <- read_csv("./data/processed_data.csv")
+#df <- read_csv("./data/processed_data.csv")
 
 total_species <- length(unique(df$common_name))
 
