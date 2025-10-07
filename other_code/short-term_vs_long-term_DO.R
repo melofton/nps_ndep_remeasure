@@ -5,6 +5,8 @@
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
 
+library(scales)
+
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 marginal_effect_Ndep_antecedent_recent <- function(data){
@@ -126,35 +128,44 @@ for(i in 1:length(common_names)){
   
 }
 
-final_pred_longterm$change_type <- "antecedent"
-final_pred_shortterm$change_type <- "short-term"
+final_pred_longterm <- final_pred_longterm %>%
+  rename(longterm = pred)
+final_pred_shortterm <- final_pred_shortterm %>%
+  rename(shortterm = pred)
 
-
-final_pred <- bind_rows(final_pred_longterm, final_pred_shortterm) 
-
-my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
+final_pred <- bind_cols(final_pred_longterm, final_pred_shortterm$shortterm) 
+colnames(final_pred)[5] <- "shortterm"
 
 ecoregions <- unique(df$ecoregion_ortho)
 
 for(i in 1:length(ecoregions)){
   
   plot_pred <- final_pred %>%
-    filter(ecoregion == ecoregions[i])
+    filter(ecoregion == ecoregions[i]) 
+  
+  cb_palette <- colorblind_pal()(8)
   
   p <- ggplot(data = plot_pred)+
-    geom_density(aes(x = pred, group = change_type, 
-                     color = change_type, fill = change_type),
-                 alpha = 0.5)+
-    facet_wrap(facets = vars(species), scales = "free")+
-    theme_bw()+
-    scale_color_manual(values = my_col)+
-    scale_fill_manual(values = my_col)+
+    geom_hline(yintercept = 0)+
     geom_vline(xintercept = 0)+
-    labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))+
-    labs(subtitle = ecoregions[i])
+    geom_point(aes(x = longterm, y = shortterm, col = species), size = 0.1, alpha = 0.1)+
+    stat_ellipse(aes(x = longterm, y = shortterm, col = species), level = 0.95, alpha = 0.5)+
+    theme_bw()+
+    xlim(-2,2)+
+    ylim(-2,2)+
+    scale_color_manual(values = c("Acer saccharaum" = cb_palette[1],
+                                  "Betula papyrifera" = cb_palette[2],
+                                  "Liriodendron tulipifera" = cb_palette[3],
+                                  "Picea rubens" = cb_palette[4],
+                                  "Pinus ponderosa" = cb_palette[5],
+                                  "Populus deltoides" = cb_palette[6],
+                                  "Populus tremuloides" = cb_palette[7],
+                                  "Prunus serotina" = cb_palette[8]))+ # Adjust width as needed
+    ylab("Growth change given 1 kg ha^-1 yr^-1 N 'short-term' increase")+
+    xlab("Growth change given 1 kg ha^-1 yr^-1 N 'long-term' increase")+
+    labs(color = "Species", title = ecoregions[i])
   
-  ggsave(p,filename = paste0("./visualizations/marginal_effect_antecedent_recent/ecoregions/",ecoregions[i],".png"),
+  ggsave(p,filename = paste0("./visualizations/short-term_vs_long-term_DO/ecoregions/",ecoregions[i],".png"),
          device = "png")
   
   
@@ -167,20 +178,28 @@ for(i in 1:length(spp)){
   plot_pred <- final_pred %>%
     filter(species == spp[i])
   
-  p <- ggplot(data = plot_pred)+
-    geom_density(aes(x = pred, group = change_type, 
-                     color = change_type, fill = change_type),
-                 alpha = 0.5)+
-    facet_wrap(facets = vars(ecoregion), scales = "free", labeller = labeller(ecoregion = label_wrap_gen(width = 15)))+
-    theme_bw()+
-    scale_color_manual(values = my_col)+
-    scale_fill_manual(values = my_col)+
-    geom_vline(xintercept = 0)+
-    labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))+
-    labs(subtitle = spp[i])
+  cb_palette <- hue_pal()(10)
   
-  ggsave(p,filename = paste0("./visualizations/marginal_effect_antecedent_recent/species/",spp[i],".png"),
+  p <- ggplot(data = plot_pred)+
+    geom_hline(yintercept = 0)+
+    geom_vline(xintercept = 0)+
+    geom_point(aes(x = longterm, y = shortterm, col = ecoregion), size = 0.1, alpha = 0.1)+
+    stat_ellipse(aes(x = longterm, y = shortterm, col = ecoregion), level = 0.95, alpha = 0.5)+
+    theme_bw()+
+    xlim(-2,2)+
+    ylim(-2,2)+
+    scale_color_manual(values = c("EASTERN TEMPERATE FORESTS" = cb_palette[1],
+                                  "NORTHWESTERN FORESTED MOUNTAINS & MARINE WEST COAST FOREST" = cb_palette[2],
+                                  "MEDITERRANEAN CALIFORNIA" = cb_palette[3],
+                                  "NORTH AMERICAN DESERTS" = cb_palette[4],
+                                  "GREAT PLAINS" = cb_palette[5],
+                                  "NORTHERN FORESTS" = cb_palette[6],
+                                  "TEMPERATE SIERRAS & SOUTHERN SEMIARID HIGHLANDS" = cb_palette[7]), labels = function(x) str_wrap(x, width = 15))+ # Adjust width as needed
+    ylab("Growth change given 1 kg ha^-1 yr^-1 N 'short-term' increase")+
+    xlab("Growth change given 1 kg ha^-1 yr^-1 N 'long-term' increase")+
+    labs(color = "Ecoregion", title = spp[i])
+  
+  ggsave(p,filename = paste0("./visualizations/short-term_vs_long-term_DO/species/",spp[i],".png"),
          device = "png")
   
   

@@ -5,12 +5,20 @@
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
 
+# load packages
+library(tidyverse)
+library(lubridate)
+library(arrow)
+library(ggpubr)
+library(ggthemes)
+library(stringr)
+
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 marginal_effect_Ndep_antecedent_recent <- function(data){
   
 # list files in each model output folder
-out <- list.files("./experiments/space_vs_time_ortho",pattern = "mcmc.parquet",
+out <- list.files("./experiments/space_vs_time_ortho_log",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
 # read in and combine files
@@ -42,7 +50,8 @@ spp_df <- read_csv(data) %>%
 
 df1 <- left_join(df, spp_df, by = "common_name") %>%
   group_by(species, common_name, ecoregion_ortho) %>%
-  summarize(mean_size = mean(AG_carbon_m1, na.rm = TRUE),
+  summarize(log_mean_size = log(mean(AG_carbon_m1, na.rm = TRUE)),
+            log_mean_ba_gt = log(mean(subp_BA_GT_m1, na.rm = TRUE) + 1),
             mean_Dep_Nhistoric = mean(Dep_Nhistoric, na.rm = TRUE),
             mean_Dep_Shistoric = mean(Dep_Shistoric, na.rm = TRUE),
             c = mean(c, na.rm = TRUE)) %>%
@@ -58,20 +67,22 @@ final_pred_shortterm <- NULL
 for(i in 1:length(common_names)){
   model_data <- df1 %>% filter(common_name == common_names[i])
   model_output <- final1 %>% filter(spp_id == common_names[i],
-                              model_id == "space_vs_time_ortho")
+                              model_id == "space_vs_time_ortho_log")
   params <- model_output[sample(nrow(model_output), 1000), ]
   
   for(j in 1:length(model_data$ecoregion_ortho)){
   
   p5_og <- params$p5 - model_data$c[j] * params$p9
   
-  pred_baseline <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
-           * model_data$mean_size[j] ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
+  pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
+           * model_data$log_mean_size[j] ^ params$p2) - params$p3*log(1)
+  pred_baseline = exp(pred_baseline_log) - 2093.9
   
-  pred_decrease <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
-                    * model_data$mean_size[j] ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
+  pred_increase_log <- ((params$global_tree_effect + -1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
+                    * model_data$log_mean_size[j] ^ params$p2) - params$p3*log(1)
+  pred_increase = exp(pred_increase_log) - 2093.9
   
-  growth_delta <- pred_decrease - pred_baseline
+  growth_delta <- pred_increase - pred_baseline
   
   pred <- data.frame(species = model_data$species[1],
                      model_id = model_output$model_id[1],
@@ -96,20 +107,22 @@ final_pred_longterm <- NULL
 for(i in 1:length(common_names)){
   model_data <- df1 %>% filter(common_name == common_names[i])
   model_output <- final1 %>% filter(spp_id == common_names[i],
-                                    model_id == "space_vs_time_ortho")
+                                    model_id == "space_vs_time_ortho_log")
   params <- model_output[sample(nrow(model_output), 1000), ]
   
   for(j in 1:length(model_data$ecoregion_ortho)){
     
     p5_og <- params$p5 - model_data$c[j] * params$p9
     
-    pred_baseline <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
-                      * model_data$mean_size[j] ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
+    pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
+                      * model_data$log_mean_size[j] ^ params$p2) - params$p3*log(1) 
+    pred_baseline = exp(pred_baseline_log) - 2093.9
     
-    pred_decrease <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + (model_data$mean_Dep_Nhistoric[j]+1)*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
-                      * model_data$mean_size[j] ^ params$p2) * 1 #exp(-model_data$mean_ba_gt*params$p3) 
+    pred_increase_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + (model_data$mean_Dep_Nhistoric[j]-1)*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10) 
+                      * model_data$log_mean_size[j] ^ params$p2) - params$p3*log(1)
+    pred_increase = exp(pred_increase_log) - 2093.9
     
-    growth_delta <- pred_decrease - pred_baseline
+    growth_delta <- pred_increase - pred_baseline
     
     pred <- data.frame(species = model_data$species[1],
                        model_id = model_output$model_id[1],
@@ -151,7 +164,7 @@ for(i in 1:length(ecoregions)){
     scale_fill_manual(values = my_col)+
     geom_vline(xintercept = 0)+
     labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))+
+    ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
     labs(subtitle = ecoregions[i])
   
   ggsave(p,filename = paste0("./visualizations/marginal_effect_antecedent_recent/ecoregions/",ecoregions[i],".png"),
@@ -177,7 +190,7 @@ for(i in 1:length(spp)){
     scale_fill_manual(values = my_col)+
     geom_vline(xintercept = 0)+
     labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))+
+    ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
     labs(subtitle = spp[i])
   
   ggsave(p,filename = paste0("./visualizations/marginal_effect_antecedent_recent/species/",spp[i],".png"),
