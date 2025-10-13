@@ -36,6 +36,7 @@ run_model <- function(k, df, sim){
   df1 <- focal_data |> 
     left_join(plots, by = join_by(plot_ID)) |> 
     left_join(trees_index, by = join_by(tree_ID)) |>
+    mutate(dt = as.numeric(date_m2 - date_m1)/365) |>
     mutate(log_AG_carbon_pYear = (log(AG_carbon_m2) - log(AG_carbon_m1)) / dt,
            log_AG_carbon_m1 = log(AG_carbon_m1),
            log_subp_BA_GT_m1 = log(subp_BA_GT_m1 + 1)) #|>
