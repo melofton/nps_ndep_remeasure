@@ -179,7 +179,7 @@ df <- focal_df5 %>%
 
 total_species <- length(unique(df$common_name))
 
-sim <- "space_vs_time_ortho_log_t"
+sim <- "space_vs_time_ortho_log"
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
               "historic_deviation_S","ss_space_vs_time")){
