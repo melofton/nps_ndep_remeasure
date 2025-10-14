@@ -179,11 +179,7 @@ df <- focal_df5 %>%
 
 total_species <- length(unique(df$common_name))
 
-<<<<<<< Updated upstream
-sim <- "space_vs_time_ortho_log_t_interaction"
-=======
 sim <- "space_vs_time_ortho_log_t"
->>>>>>> Stashed changes
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
               "historic_deviation_S","ss_space_vs_time")){
@@ -194,11 +190,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-<<<<<<< Updated upstream
-source("./modeling_code/space_vs_time_ortho_log_t_interaction.R")
-=======
-source("./modeling_code/space_vs_time_ortho_log_t.R")
->>>>>>> Stashed changes
+source("./modeling_code/space_vs_time_ortho_log.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
