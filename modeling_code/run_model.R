@@ -130,18 +130,15 @@ for(i in 1:length(reg)){
   rtilde_n = as.numeric(P_s %*% r_n)
   atilde_n = as.numeric(P_s %*% a_n)
   
-  rtilde_n_centered = scale(rtilde_n, center = TRUE)
-  atilde_n_centered = scale(atilde_n, center = TRUE)
+  P_n = diag(n_n) - (rtilde_n %*% solve(t(rtilde_n) %*% rtilde_n, t(rtilde_n)))
   
-  P_n = diag(n_n) - (rtilde_n_centered %*% solve(t(rtilde_n_centered) %*% rtilde_n_centered, t(rtilde_n_centered)))
+  astar_n = as.numeric(P_n %*% atilde_n)
   
-  astar_n = as.numeric(P_n %*% atilde_n_centered)
-  
-  c0 = (t(rtilde_n_centered) %*% atilde_n_centered) / (t(rtilde_n_centered) %*% rtilde_n_centered)
+  c0 = (t(rtilde_n) %*% atilde_n) / (t(rtilde_n) %*% rtilde_n)
   c = c0[1,]
 
   current_dat$Dep_Nhistoric_ortho = astar_n
-  current_dat$Dep_Ndiff_ortho = rtilde_n_centered
+  current_dat$Dep_Ndiff_ortho = rtilde_n
   current_dat$c = c
 
   if(i == 1){
@@ -182,7 +179,11 @@ df <- focal_df5 %>%
 
 total_species <- length(unique(df$common_name))
 
+<<<<<<< Updated upstream
 sim <- "space_vs_time_ortho_log_t_interaction"
+=======
+sim <- "space_vs_time_ortho_log_t"
+>>>>>>> Stashed changes
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
               "historic_deviation_S","ss_space_vs_time")){
@@ -193,7 +194,11 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
+<<<<<<< Updated upstream
 source("./modeling_code/space_vs_time_ortho_log_t_interaction.R")
+=======
+source("./modeling_code/space_vs_time_ortho_log_t.R")
+>>>>>>> Stashed changes
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
