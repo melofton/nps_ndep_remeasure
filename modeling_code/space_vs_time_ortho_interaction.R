@@ -60,7 +60,6 @@ run_model <- function(k, df, sim){
   tau_global ~ dunif(0.0001,10)
   tau_plot ~ dunif(0.0001,10)
   procErr ~ dgamma(1,1) # consider using a gamma here and for other tau parameters
-  nu ~ dexp(1/30) T(2,) # truncated exponential
   p2 ~ dunif(0,2) 
   p3 ~ dunif(0,100) 
   p5 ~ dnorm(0,0.001)
@@ -86,9 +85,7 @@ run_model <- function(k, df, sim){
     * tree_agb_obs[t] ^ p2) 
         * exp(-ba_gt[t]*p3)  # add one here if go logged route b/c if you are the biggest tree it would be 0 and therefore undefined
     
-    lambda[t] ~ dgamma(nu/2, nu/2)
-
-    tree_growth_obs[t] ~ dnorm(tree_growth_mean[t], procErr*lambda[t]) # multiplied b/c JAGS uses precision
+    tree_growth_obs[t] ~ dnorm(tree_growth_mean[t], procErr) # multiplied b/c JAGS uses precision
   
   }
 
@@ -120,7 +117,6 @@ run_model <- function(k, df, sim){
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
-                     "nu" = 3,
                      "p2" = 0.6,
                      "p3" = 1,
                      "p5" = init_values[k,"p5"] + init_values[k,"p5_delta"],
@@ -135,7 +131,6 @@ run_model <- function(k, df, sim){
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
-                     "nu" = 10,
                      "p2" = 0.4,
                      "p3" = 1,
                      "p5" = init_values[k,"p5"],
@@ -150,7 +145,6 @@ run_model <- function(k, df, sim){
                      "tau_global" = 1,
                      "tau_plot" = 1,
                      "procErr" = 0.001,
-                     "nu" = 100,
                      "p2" = 0.4,
                      "p3" = 1,
                      "p5" = init_values[k,"p5"] - init_values[k,"p5_delta"],
@@ -176,8 +170,7 @@ run_model <- function(k, df, sim){
                 "p12",
                 "procErr", 
                 "global_tree_effect",
-                "plot_effect",
-                "nu")
+                "plot_effect")
   
   ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=15000, thin = 5)
   mcmc <- spread_draws(ssFit,
@@ -192,8 +185,7 @@ run_model <- function(k, df, sim){
                        p11,
                        p12,
                        procErr, 
-                       global_tree_effect,
-                       nu) 
+                       global_tree_effect) 
   mcmc_treeEffect <- spread_draws(ssFit,
                                   `tree_effect`[n])
   

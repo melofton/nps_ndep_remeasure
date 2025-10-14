@@ -26,8 +26,8 @@ run_model <- function(k, df, sim){
     mutate(dt = as.numeric(date_m2 - date_m1)/365) |>
     mutate(log_AG_carbon_pYear = (log(AG_carbon_m2) - log(AG_carbon_m1)) / dt,
            log_AG_carbon_m1 = log(AG_carbon_m1),
-           log_subp_BA_GT_m1 = log(subp_BA_GT_m1 + 1)) |>
-    slice(c(1:100))
+           log_subp_BA_GT_m1 = log(subp_BA_GT_m1 + 1)) #|>
+    #slice(c(1:100))
   
   log_mean_annual_avg_growth <- df1$log_AG_carbon_pYear
   log_start_measures <- df1$log_AG_carbon_m1
