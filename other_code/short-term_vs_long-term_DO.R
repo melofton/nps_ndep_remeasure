@@ -153,7 +153,7 @@ for(i in 1:length(ecoregions)){
     theme_bw()+
     xlim(-2,2)+
     ylim(-2,2)+
-    scale_color_manual(values = c("Acer saccharaum" = cb_palette[1],
+    scale_color_manual(values = c("Acer saccharum" = cb_palette[1],
                                   "Betula papyrifera" = cb_palette[2],
                                   "Liriodendron tulipifera" = cb_palette[3],
                                   "Picea rubens" = cb_palette[4],
