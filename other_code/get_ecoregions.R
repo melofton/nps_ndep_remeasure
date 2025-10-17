@@ -80,7 +80,7 @@ plotting_points <- st_as_sf(plots,
                          crs = 4269) #NAD 83 as specified in FIA docs
 
 # Create the plot
-ggplot() +
+p <- ggplot() +
   # Add the ecoregions layer, using the ecoregion name for the fill color
   geom_sf(data = us_ecoregions_sf, aes(fill = NA_L1NAME), color = "white", linewidth = 0.1) +
   geom_sf(data = plotting_points, aes(fill = level1_ecoregion), color = "black", shape = 21) +
