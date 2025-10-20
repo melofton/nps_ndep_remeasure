@@ -39,7 +39,7 @@ baseline_vars2 <- focal_df %>%
          Dep_Noxi15, Dep_Nred, Dep_Nred15, Dep_S, Dep_S15) %>%
   distinct(.) %>%
   group_by(plot_ID) %>%
-  dplyr::filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
+  #dplyr::filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
   arrange(plot_ID) %>%
   mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
   mutate(total_years = 15 + dt) %>%

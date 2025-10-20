@@ -39,7 +39,7 @@ baseline_vars2 <- focal_df %>%
          Dep_Noxi15, Dep_Nred, Dep_Nred15, Dep_S, Dep_S15) %>%
   distinct(.) %>%
   group_by(plot_ID) %>%
-  dplyr::filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
+  #dplyr::filter(date_m1 == min(date_m1, na.rm = TRUE)) %>%
   arrange(plot_ID) %>%
   mutate(dt = as.numeric(date_m2 - date_m1)/365) %>%
   mutate(total_years = 15 + dt) %>%
@@ -50,11 +50,11 @@ baseline_vars2 <- focal_df %>%
   mutate(Dep_NpropBaseline = Dep_N / Dep_Nhistoric,
          Dep_NoxipropBaseline = Dep_Noxi / Dep_Noxihistoric,
          Dep_NredpropBaseline = Dep_Nred / Dep_Nredhistoric) %>%
-  select(plot_ID, Dep_Nhistoric, Dep_Noxihistoric, Dep_Nredhistoric, Dep_Shistoric,
+  select(plot_ID, date_m1, Dep_Nhistoric, Dep_Noxihistoric, Dep_Nredhistoric, Dep_Shistoric,
          Dep_NpropBaseline, Dep_NoxipropBaseline, Dep_NredpropBaseline)
 
 focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
-  left_join(baseline_vars2, by = "plot_ID") %>%
+  left_join(baseline_vars2, by = c("plot_ID","date_m1")) %>%
   group_by(plot_ID) %>%
   mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
          Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
