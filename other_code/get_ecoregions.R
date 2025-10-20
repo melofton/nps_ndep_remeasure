@@ -5,9 +5,7 @@
 library(sf)
 library(rnaturalearth)
 
-og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
-  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
-#filter(common_name %in% c("eastern cottonwood"))
+og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) 
 
 shapefile_path <- "./na_cec_eco_l1/NA_CEC_Eco_Level1.shp" # Replace with your actual path
 polygons_sf <- st_read(shapefile_path) %>%
@@ -72,8 +70,8 @@ crs_na <- st_crs(na_ecoregions)
 us_sf_transformed <- st_transform(us_boundaries, crs = crs_na)
 us_ecoregions_sf <- st_intersection(na_ecoregions, us_sf_transformed)
 
-plots <- read_csv("./data/plot_ecoregions.csv") %>%
-  filter(!level1_ecoregion %in% c("WATER",NA))
+# plots <- read_csv("./data/plot_ecoregions.csv") %>%
+#   filter(!level1_ecoregion %in% c("WATER",NA))
 
 plotting_points <- st_as_sf(plots,
                          coords = c("lon", "lat"),
@@ -97,6 +95,12 @@ p <- ggplot() +
     axis.title = element_blank(),
     panel.grid = element_blank()
   )
+
+p
+
+check <- plots %>%
+  filter(is.na(level1_ecoregion)) # we lose 11 plots that are at the northern border
+# of conterminous U.S.
 
 # write to file
 write.csv(plots, "./data/plot_ecoregions.csv", row.names = FALSE)

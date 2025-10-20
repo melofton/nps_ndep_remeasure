@@ -47,10 +47,11 @@ us_boundaries <- ne_states(country = "United States of America", returnclass = "
 crs_us <- st_crs(us_boundaries)
 crs_na <- st_crs(na_ecoregions)
 us_sf_transformed <- st_transform(us_boundaries, crs = crs_na)
-us_ecoregions_sf <- st_intersection(na_ecoregions, us_sf_transformed)
+us_ecoregions_sf <- st_intersection(na_ecoregions, us_sf_transformed) %>%
+  filter(!NA_L1NAME == "WATER")
 
 plots <- read_csv("./data/plot_ecoregions.csv") %>%
-  filter(!level1_ecoregion %in% c("WATER",NA))
+  filter(!level1_ecoregion %in% c("WATER",NA) & plot_ID %in% df$plot_ID)
 
 plotting_points <- st_as_sf(plots,
                             coords = c("lon", "lat"),
