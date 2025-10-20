@@ -13,8 +13,8 @@ library(furrr)
 mem.maxVSize(vsize = Inf)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
- dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
-  #filter(common_name %in% c("eastern cottonwood"))
+  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+#filter(common_name %in% c("eastern cottonwood"))
 
 focal_df <- og_df %>%
   select(common_name, plot_ID, tree_ID, interval_no, Dep_N, Dep_N15, Dep_Noxi15, Dep_Nred15, Dep_Noxi, Dep_Nred, 
@@ -50,11 +50,11 @@ baseline_vars2 <- focal_df %>%
   mutate(Dep_NpropBaseline = Dep_N / Dep_Nhistoric,
          Dep_NoxipropBaseline = Dep_Noxi / Dep_Noxihistoric,
          Dep_NredpropBaseline = Dep_Nred / Dep_Nredhistoric) %>%
-  select(plot_ID, Dep_Nhistoric, Dep_Noxihistoric, Dep_Nredhistoric, Dep_Shistoric,
+  select(plot_ID, date_m1, Dep_Nhistoric, Dep_Noxihistoric, Dep_Nredhistoric, Dep_Shistoric,
          Dep_NpropBaseline, Dep_NoxipropBaseline, Dep_NredpropBaseline)
 
 focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
-  left_join(baseline_vars2, by = "plot_ID") %>%
+  left_join(baseline_vars2, by = c("plot_ID","date_m1")) %>%
   group_by(plot_ID) %>%
   mutate(Dep_Ndelta = Dep_N - Dep_Nbaseline,
          Dep_Noxidelta = Dep_Noxi - Dep_Noxibaseline,
@@ -124,7 +124,7 @@ for(i in 1:length(reg)){
   
   n_s = length(r_s)
   n_n = length(r_n)
-
+  
   S = cbind(1, r_s, a_s) # design matrix needs to include intercept [1, S]
   P_s = diag(n_s) - (S %*% solve(t(S) %*% S, t(S))) # projection onto span{1,S}
   rtilde_n = as.numeric(P_s %*% r_n)
@@ -136,17 +136,17 @@ for(i in 1:length(reg)){
   
   c0 = (t(rtilde_n) %*% atilde_n) / (t(rtilde_n) %*% rtilde_n)
   c = c0[1,]
-
+  
   current_dat$Dep_Nhistoric_ortho = astar_n
   current_dat$Dep_Ndiff_ortho = rtilde_n
   current_dat$c = c
-
+  
   if(i == 1){
     final <- current_dat
   } else {
     final <- bind_rows(final, current_dat)
   }
-
+  
 }
 
 focal_df4 <- left_join(focal_df3, final, by = c("plot_ID","level1_ecoregion","Dep_Shistoric","Dep_Sdiff",          
