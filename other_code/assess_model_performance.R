@@ -6,8 +6,8 @@
 
 #source("./other_code/get_model_inputs.R")
 
-assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/space_vs_time_ortho",
+assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
+                        model_output_folder = "./experiments/ortho_t_interaction_adj_priors",
                         plot_title = ""){
   
   ## READ IN AND WRANGLE MODEL OUTPUT
@@ -61,7 +61,8 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   }
   
   final <- final %>%
-    mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id))
+    mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
+    filter(!spp_id == "sugar maple")
   
   tree_effects <- final %>%
     group_by(spp_id, n) %>%
@@ -73,7 +74,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   out1 <- list.files(model_output_folder,pattern = "mcmc.parquet",
                     full.names = TRUE)
   
-  if(grep("short-term_long-term",model_output_folder)){
+  if(!length(grep("short-term_long-term",model_output_folder)) == 0){
     
     for(i in 1:length(out1)){
     
@@ -136,27 +137,15 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
     left_join(tree_effects, by = join_by(common_name, tree_index)) |>
     left_join(final_param_sum, by = join_by(common_name)) 
   
-  # if(grep("delta_env",model_output_folder)){
-  #   df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
-  # } 
-  # if(grep("N_species",model_output_folder)){
-  #   df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Noxidelta*p4 + Dep_Nreddelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) ) 
-  # }
-  # error
-  # Error in if (grep("delta_env", model_output_folder)) { :                              
-  #     argument is of length zero
-  if(!length(grep("short-term_long-term",model_output_folder)) == 0){
-    df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndelta*p5 + Dep_Sdelta*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_N_LTchange*p9 + Dep_Nhistoric*p10) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) )
-  }
-  if(!length(grep("space_vs_time_ortho",model_output_folder)) == 0){
-    df1 <- df1 %>% mutate(pred = ((mean_tree_effect + Dep_Ndiff_ortho*p5 + Dep_Sdiff*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_Nhistoric_ortho*p9 + Dep_Shistoric*p10) * AG_carbon_m1 ^ p2)  * exp(-subp_BA_GT_m1*p3) )
-  }
+  df2 <- df1 %>%
+    mutate(pred = ((mean_tree_effect + Dep_Ndiff_ortho*p5 + Dep_Sdiff*p6 + MAT_delta*p7 + MAP_delta_dm*p8 + Dep_Nhistoric_ortho*p9 + Dep_Shistoric*p10 + Dep_Nhistoric_ortho*Dep_Ndiff_ortho*p11 + Dep_Ndiff_ortho*Dep_Ndiff_ortho*p12) * AG_carbon_m1^p2) * exp(-subp_BA_GT_m1*p3))
   
   rsq <- function(pred, obs){
     1 - (sum((obs - pred)^2, na.rm = TRUE) / sum((obs - mean(obs, na.rm = TRUE))^2, na.rm = TRUE))
   }
   
-  mod_assess0 <- df1 %>%
+  mod_assess0 <- df2 %>%
+    filter(!common_name == "sugar maple") %>%
     group_by(common_name) %>%
     summarize(r2 = rsq(pred = pred, obs = AG_carbon_pYear),
               rmse = sqrt(mean((AG_carbon_pYear - pred)^2, na.rm = TRUE)),
@@ -169,13 +158,13 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) 
   
   mod_assess <- left_join(mod_assess0, spp_df, by = "common_name")
-  df2 <- left_join(df1, spp_df, by = "common_name")
+  df3 <- left_join(df2, spp_df, by = "common_name")
     
   r2 <- ggplot(mod_assess, aes(x=reorder(species, r2), y=r2, color=as.factor(species))) + 
     geom_point() +
     geom_segment(aes(x=species,xend=species,y=0,yend=r2)) +
     ylab(expression(paste(R^2))) +
-    xlab("Species") +
+    xlab("") +
     coord_flip() +
     scale_color_colorblind()+
     theme_bw()+
@@ -185,7 +174,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
     geom_point() +
     geom_segment(aes(x=species,xend=species,y=0,yend=rmse)) +
     ylab(expression(paste("RMSE (kg C ", y^-1," ",ind^-1,")"))) +
-    xlab("Species") +
+    xlab("") +
     coord_flip() +
     scale_color_colorblind()+
     theme_bw()+
@@ -195,7 +184,7 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
     geom_point() +
     geom_segment(aes(x=species,xend=species,y=0,yend=mae)) +
     ylab(expression(paste("MAE (kg C ", y^-1," ",ind^-1,")"))) +
-    xlab("Species") +
+    xlab("") +
     coord_flip() +
     scale_color_colorblind()+
     theme_bw()+
@@ -206,13 +195,15 @@ assess_model_performance <- function(data = "./data/McDonnell_etal_InPrep_TreeDa
   p1 <- annotate_figure(p1, top = text_grob(plot_title, 
                                         color = "black", face = "bold", size = 14))
   
-  p2 <- ggplot(data = df2)+
+  p2 <- ggplot(data = df3)+
     geom_point(aes(x = AG_carbon_pYear, y = pred))+
     geom_abline(slope = 1)+
     theme_bw()+
     theme(legend.position = "none")+
     #ggtitle("Displaying repeated measures")+
-    facet_wrap(facets = vars(species), scales = "free")
+    facet_wrap(facets = vars(species), scales = "free")+
+    xlab(expression(paste("observed tree growth (kg C ", y^-1," ",ind^-1,")")))+
+    ylab(expression(paste("predicted tree growth (kg C ", y^-1," ",ind^-1,")")))
   
   return(list(df = mod_assess, plot1 = p1, plot2 = p2))
     
