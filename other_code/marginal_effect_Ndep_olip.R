@@ -39,7 +39,6 @@ for(i in 1:length(out)){
 }
 
 final1 <- final %>%
-  filter(.iteration >= 250) %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) 
 
@@ -55,7 +54,8 @@ df1 <- left_join(df, spp_df, by = "common_name") %>%
             log_mean_ba_gt = log(mean(subp_BA_GT_m1, na.rm = TRUE) + 1),
             mean_Dep_Nhistoric = mean(Dep_Nhistoric, na.rm = TRUE),
             mean_Dep_Shistoric = mean(Dep_Shistoric, na.rm = TRUE),
-            c = mean(c, na.rm = TRUE)) %>%
+            c = mean(c, na.rm = TRUE),
+            mean_size = mean(AG_carbon_m1, na.rm = TRUE)) %>%
   mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
   ungroup()
 
@@ -66,8 +66,6 @@ common_names <- unique(df1$common_name)
 final_pred_shortterm <- NULL
 
 for(i in 1:length(common_names)){
-  
-  if(common_names[i] == "sugar maple") next
   
   model_data <- df1 %>% filter(common_name == common_names[i])
   model_output <- final1 %>% filter(spp_id == common_names[i],
@@ -80,11 +78,13 @@ for(i in 1:length(common_names)){
   
   pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
                         + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-  pred_baseline = exp(pred_baseline_log)
+  m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
+  pred_baseline = m2_baseline - model_data$mean_size[j]
   
   pred_increase_log <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*1*params$p11 + 1*1*params$p12) 
                     + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-  pred_increase = exp(pred_increase_log)
+  m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
+  pred_increase = m2_increase - model_data$mean_size[j]
   
   growth_delta <- pred_increase - pred_baseline
   
@@ -110,8 +110,6 @@ final_pred_longterm <- NULL
 
 for(i in 1:length(common_names)){
   
-  if(common_names[i] == "sugar maple") next
-  
   model_data <- df1 %>% filter(common_name == common_names[i])
   model_output <- final1 %>% filter(spp_id == common_names[i],
                                     model_id == "ortho_log_interaction_adj_priors")
@@ -123,11 +121,13 @@ for(i in 1:length(common_names)){
     
     pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
                           + params$p2*model_data$log_mean_size[j]) - params$p3*log(1) 
-    pred_baseline = exp(pred_baseline_log)
+    m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
+    pred_baseline = m2_baseline - model_data$mean_size[j]
     
     pred_increase_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + (model_data$mean_Dep_Nhistoric[j]+1)*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + (model_data$mean_Dep_Nhistoric[j]+1)*0*params$p11 + 0*0*params$p12) 
                           + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-    pred_increase = exp(pred_increase_log)
+    m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
+    pred_increase = m2_increase - model_data$mean_size[j]
     
     growth_delta <- pred_increase - pred_baseline
     
@@ -177,14 +177,11 @@ for(i in 1:length(ecoregions)){
   ggsave(p,filename = paste0("./visualizations/marginal_effect_olip/ecoregions/",ecoregions[i],".png"),
          device = "png")
   
-  
 }
 
 spp <- unique(df1$species)
 
 for(i in 1:length(spp)){
-  
-  if(spp[i] == "Acer saccharum") next
   
   plot_pred <- final_pred %>%
     filter(species == spp[i])
@@ -204,7 +201,6 @@ for(i in 1:length(spp)){
   
   ggsave(p,filename = paste0("./visualizations/marginal_effect_olip/species/",spp[i],".png"),
          device = "png")
-  
   
 }
 

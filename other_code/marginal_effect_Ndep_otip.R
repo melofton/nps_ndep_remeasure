@@ -31,7 +31,6 @@ for(i in 1:length(out)){
 }
 
 final1 <- final %>%
-  filter(.iteration >= 2000) %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) 
 
