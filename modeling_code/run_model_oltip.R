@@ -13,7 +13,8 @@ library(furrr)
 mem.maxVSize(vsize = Inf)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
-  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+  #dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
+  dplyr::filter(common_name %in% c("ponderosa pine","eastern cottonwood")) 
 #filter(common_name %in% c("eastern cottonwood"))
 
 focal_df <- og_df %>%
