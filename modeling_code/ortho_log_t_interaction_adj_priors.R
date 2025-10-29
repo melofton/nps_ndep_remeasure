@@ -183,7 +183,7 @@ run_model <- function(k, df, sim){
                 "plot_effect",
                 "nu")
   
-  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=45000, thin = 15)
+  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=60000, thin = 10)
   
   mcmc <- spread_draws(ssFit,
                        p2, 
