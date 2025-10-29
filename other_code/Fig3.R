@@ -26,7 +26,7 @@ ggsave(plot = p1, filename = "./visualizations/final_figures/Figure3_supp.tif",
        device = "tiff", height = 5, width = 10, units = "in",bg = "white")
 ggsave(plot = p2, filename = "./visualizations/final_figures/Figure3.tif",
        device = "tiff", height = 8, width = 8, units = "in",bg = "white")
-ggsave(plot = p3, filename = "./visualizations/pred_vs_obs_olip_log.tif",
+ggsave(plot = p3, filename = "./visualizations/final_figures/Figure3_log.tif",
        device = "tiff", height = 8, width = 8, units = "in",bg = "white")
 
 p2 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
