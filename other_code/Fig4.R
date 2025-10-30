@@ -225,7 +225,7 @@ my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
     labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
     ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
   
-  ggsave(p,filename = "./visualizations/final_figures/Figure4_olip.png",
+  ggsave(p,filename = "./visualizations/final_figures/Figure4.png",
          device = "png")
   
 

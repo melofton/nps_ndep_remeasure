@@ -5,13 +5,7 @@
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
 
-# load packages
-library(tidyverse)
-library(lubridate)
-library(arrow)
-library(ggpubr)
-library(ggthemes)
-library(stringr)
+library(scales)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
@@ -70,43 +64,41 @@ for(i in 1:length(common_names)){
   
   model_data <- df1 %>% filter(common_name == common_names[i])
   model_output <- final1 %>% filter(spp_id == common_names[i],
-                              model_id == "ortho_log_t_interaction_adj_priors")
+                                    model_id == "ortho_log_t_interaction_adj_priors")
   params <- model_output[sample(nrow(model_output), 1000), ]
   
   for(j in 1:length(model_data$ecoregion_ortho)){
-  
-  p5_og <- params$p5 - model_data$c[j] * params$p9
-  
-  pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
-                        + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-  m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
-  pred_baseline = m2_baseline - model_data$mean_size[j]
-  
-  pred_increase_log <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*1*params$p11 + 1*1*params$p12) 
-                    + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-  m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
-  pred_increase = m2_increase - model_data$mean_size[j]
-  
-  growth_delta <- pred_increase - pred_baseline
-  
-  pred <- data.frame(species = model_data$species[1],
-                     model_id = model_output$model_id[1],
-                     ecoregion = model_data$ecoregion_ortho[j],
-                     pred = growth_delta)
-  
-  if(i == 1 & j == 1){
-    final_pred_shortterm <- pred
-  } else {
-    final_pred_shortterm <- bind_rows(final_pred_shortterm, pred)
-  }
-  
+    
+    p5_og <- params$p5 - model_data$c[j] * params$p9
+    
+    pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
+                          + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
+    m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
+    pred_baseline = m2_baseline - model_data$mean_size[j]
+    
+    pred_increase_log <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*1*params$p11 + 1*1*params$p12) 
+                          + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
+    m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
+    pred_increase = m2_increase - model_data$mean_size[j]
+    
+    growth_delta <- pred_increase - pred_baseline
+    
+    pred <- data.frame(species = model_data$species[1],
+                       model_id = model_output$model_id[1],
+                       ecoregion = model_data$ecoregion_ortho[j],
+                       pred = growth_delta)
+    
+    if(i == 1 & j == 1){
+      final_pred_shortterm <- pred
+    } else {
+      final_pred_shortterm <- bind_rows(final_pred_shortterm, pred)
+    }
+    
   }
   
 }
 
-
 # get model predictions for antecedent Ndep changes 
-
 final_pred_longterm <- NULL
 
 for(i in 1:length(common_names)){
@@ -165,7 +157,7 @@ for(i in 1:length(spp)){
     select(ecoregion_ortho, n_trees_ecoregion)
   
   tree_ecos <- unique(n_trees_ecoregion$ecoregion_ortho)
- 
+  
   for(j in 1:length(n_trees_ecoregion$ecoregion_ortho)){
     
     species_pred_shortterm_eco <- final_pred_shortterm %>%
@@ -197,7 +189,8 @@ for(i in 1:length(spp)){
   
   final_pred_species <- data.frame(species = spp[i],
                                    change_type = rep(c("short-term","antecedent"),each = 1000),
-                                   pred = pred)
+                                   pred = pred,
+                                   draw = rep(c(1:1000),times = 2))
   
   if(i == 1){
     final_pred <- final_pred_species
@@ -209,27 +202,38 @@ for(i in 1:length(spp)){
   
 }
 
-my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
+## figure
 
+plot_pred <- final_pred %>%
+  pivot_wider(names_from = change_type, values_from = pred) %>%
+  rename(shortterm = `short-term`)
 
-  
-  p <- ggplot(data = final_pred)+
-    geom_density(aes(x = pred, group = change_type, 
-                     color = change_type, fill = change_type),
-                 alpha = 0.5)+
-    facet_wrap(facets = vars(species), scales = "free")+
-    theme_bw()+
-    scale_color_manual(values = my_col)+
-    scale_fill_manual(values = my_col)+
+cb_palette <- colorblind_pal()(8)
+
+  p <- ggplot(data = plot_pred)+
+    geom_hline(yintercept = 0)+
     geom_vline(xintercept = 0)+
-    labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
+    geom_point(aes(x = antecedent, y = shortterm, col = species), size = 0.1, alpha = 0.1)+
+    stat_ellipse(aes(x = antecedent, y = shortterm, col = species), level = 0.95, alpha = 0.5)+
+    theme_bw()+
+    xlim(-1.5,1.5)+
+    ylim(-1.5,1.5)+
+    scale_color_manual(values = c("Acer saccharum" = cb_palette[1],
+                                  "Betula papyrifera" = cb_palette[2],
+                                  "Liriodendron tulipifera" = cb_palette[3],
+                                  "Picea rubens" = cb_palette[4],
+                                  "Pinus ponderosa" = cb_palette[5],
+                                  "Populus deltoides" = cb_palette[6],
+                                  "Populus tremuloides" = cb_palette[7],
+                                  "Prunus serotina" = cb_palette[8]))+ # Adjust width as needed
+    ylab("Growth change given 1 kg ha^-1 yr^-1 N 'short-term' increase")+
+    xlab("Growth change given 1 kg ha^-1 yr^-1 N 'long-term' increase")+
+    labs(color = "Species")
   
-  ggsave(p,filename = "./visualizations/final_figures/Figure4_olip.png",
+  ggsave(p,filename = "./visualizations/final_figures/Figure5_inset.png",
          device = "png")
   
-
-
+  
 
 
 }

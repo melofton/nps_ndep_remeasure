@@ -203,5 +203,5 @@ source("./modeling_code/ortho_log_t_interaction_adj_priors.R")
 future::plan("future::multisession", workers = 8) # workers is number of sessions
 
 #total_species <- length(unique(df$common_name))
-total_species <- c("ponderosa pine","eastern cottonwood")
+total_species <- length(c("ponderosa pine","eastern cottonwood"))
 furrr::future_walk(1:total_species, run_model, df, sim)
