@@ -42,7 +42,7 @@ fig1_supp <- ggplot() +
     aes(lon, lat, color = n),
     shape = 16, alpha = 1, size = 1
   ) +
-  scale_color_viridis(option = "B", trans = "log10")+
+  scale_color_viridis(option = "H", trans = "log10")+
   xlab("")+
   ylab("")+
   theme_classic()+

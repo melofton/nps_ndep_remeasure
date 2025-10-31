@@ -211,13 +211,21 @@ for(i in 1:length(spp)){
 
 my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
 
+mean_growth <- left_join(df, spp_df, by = "common_name") %>%
+  group_by(species, common_name) %>%
+  summarize(mean_growth = mean(AG_carbon_pYear, na.rm = TRUE)) %>%
+  select(species, mean_growth) %>%
+  separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
+  mutate(facet_labels = paste0("atop(italic(",genus,"~",spp,"), mean~growth~rate:",round(mean_growth,1),")"))
+
+plot_data <- left_join(final_pred, mean_growth, by = "species") 
 
   
-  p <- ggplot(data = final_pred)+
+  p <- ggplot(data = plot_data)+
     geom_density(aes(x = pred, group = change_type, 
                      color = change_type, fill = change_type),
                  alpha = 0.5)+
-    facet_wrap(facets = vars(species), scales = "free")+
+    facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
     theme_bw()+
     scale_color_manual(values = my_col)+
     scale_fill_manual(values = my_col)+
