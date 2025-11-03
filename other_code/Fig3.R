@@ -22,9 +22,9 @@ p1 <- assess_model_performance(data = "./data/McDonnell_etal_InPrep_TreeData_202
                                plot_title = "")
 p1$plot1
 p1$plot2
-ggsave(plot = p1, filename = "./visualizations/final_figures/Figure3_supp.tif",
+ggsave(plot = p1, filename = "./visualizations/final_figures/Figure3_supp1.tif",
        device = "tiff", height = 5, width = 10, units = "in",bg = "white")
-ggsave(plot = p2, filename = "./visualizations/final_figures/Figure3.tif",
+ggsave(plot = p2, filename = "./visualizations/final_figures/Figure3_supp2.tif",
        device = "tiff", height = 8, width = 8, units = "in",bg = "white")
 ggsave(plot = p3, filename = "./visualizations/final_figures/Figure3_log.tif",
        device = "tiff", height = 8, width = 8, units = "in",bg = "white")
