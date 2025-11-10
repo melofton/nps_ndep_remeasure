@@ -183,7 +183,7 @@ run_model <- function(k, df, sim){
                 "plot_effect",
                 "nu")
   
-  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=15000, thin = 5)
+  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=30000, thin = 10)
   
   # get ESS
   ess_vars <- ssFit[, varnames(ssFit) %in% parNames]
