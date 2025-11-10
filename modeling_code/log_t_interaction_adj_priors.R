@@ -65,8 +65,8 @@ run_model <- function(k, df, sim){
   tau_plot ~ dgamma(1,1)
   procErr ~ dgamma(1,1) # consider using a gamma here and for other tau parameters
   nu ~ dexp(1/30) T(2,) # truncated exponential
-  p2 ~ dgamma(1,1)
-  p3 ~ dgamma(1,1)
+  p2 ~ dnorm(0,0.001)
+  p3 ~ dnorm(0,0.001)
   p5 ~ dnorm(0,0.001)
   p6 ~ dnorm(0,0.001)
   p7 ~ dnorm(0,0.001)
@@ -183,7 +183,12 @@ run_model <- function(k, df, sim){
                 "plot_effect",
                 "nu")
   
-  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=60000, thin = 10)
+  ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=15000, thin = 5)
+  
+  # get ESS
+  ess_vars <- ssFit[, varnames(ssFit) %in% parNames]
+  ess <- effectiveSize(ess_vars)
+  write.csv(ess, paste0("./experiments/",sim,"/",sim, "-",tree_species,"-ess.csv"))
   
   mcmc <- spread_draws(ssFit,
                        p2, 

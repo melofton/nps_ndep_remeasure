@@ -5,8 +5,8 @@ model {
   tau_plot ~ dgamma(1,1)
   procErr ~ dgamma(1,1) # consider using a gamma here and for other tau parameters
   nu ~ dexp(1/30) T(2,) # truncated exponential
-  p2 ~ dgamma(1,1)
-  p3 ~ dgamma(1,1)
+  p2 ~ dnorm(0,0.001)
+  p3 ~ dnorm(0,0.001)
   p5 ~ dnorm(0,0.001)
   p6 ~ dnorm(0,0.001)
   p7 ~ dnorm(0,0.001)

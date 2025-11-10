@@ -6,10 +6,16 @@
 
 #source("./other_code/get_model_inputs.R")
 
-assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", 
-                        model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors",
-                        plot_title = "Ortho log t interaction model"){
-  
+# load packages
+library(tidyverse)
+library(lubridate)
+library(arrow)
+library(ggpubr)
+library(ggthemes)
+
+data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv" 
+model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
+
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
   out <- list.files(model_output_folder,pattern = "treeEffect.parquet",
@@ -152,9 +158,9 @@ assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_Tr
   
   mod_assess0 <- df2 %>%
     group_by(common_name) %>%
-    summarize(r2 = rsq(pred = pred_log, obs = log_AG_carbon_pYear),
-              rmse = sqrt(mean((log_AG_carbon_pYear - pred_log)^2, na.rm = TRUE)),
-              mae = mean(abs(pred_log - log_AG_carbon_pYear), na.rm = TRUE))
+    summarize(r2 = rsq(pred = pred, obs = AG_carbon_pYear),
+              rmse = sqrt(mean((AG_carbon_pYear - pred)^2, na.rm = TRUE)),
+              mae = mean(abs(pred - AG_carbon_pYear), na.rm = TRUE))
   
   spp_df <- read_csv(data) %>%
     dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
@@ -164,6 +170,8 @@ assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_Tr
   
   mod_assess <- left_join(mod_assess0, spp_df, by = "common_name")
   df3 <- left_join(df2, spp_df, by = "common_name")
+  
+  write.csv(mod_assess, "./experiments/ortho_log_t_interaction_adj_priors/model_performance.csv", row.names = FALSE)
     
   r2 <- ggplot(mod_assess, aes(x=reorder(species, r2), y=r2, color=as.factor(species))) + 
     geom_point() +
@@ -178,7 +186,7 @@ assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_Tr
   rmse <- ggplot(mod_assess, aes(x=reorder(species, -rmse), y=rmse, color=as.factor(species))) + 
     geom_point() +
     geom_segment(aes(x=species,xend=species,y=0,yend=rmse)) +
-    ylab(expression(paste("RMSE log(kg C ", y^-1," ",ind^-1,")"))) +
+    ylab(expression(paste("RMSE (kg C ", y^-1," ",ind^-1,")"))) +
     xlab("") +
     coord_flip() +
     scale_color_colorblind()+
@@ -195,10 +203,7 @@ assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_Tr
     theme_bw()+
     theme(legend.position = "none")
   
-  p1 <- ggarrange(r2, rmse, mae,
-                  ncol = 3)
-  p1 <- annotate_figure(p1, top = text_grob(plot_title, 
-                                        color = "black", face = "bold", size = 14))
+  p1 <- ggarrange(r2, rmse, ncol = 2)
   
   p2 <- ggplot(data = df3)+
     geom_point(aes(x = AG_carbon_pYear, y = pred))+
@@ -220,6 +225,7 @@ assess_model_performance_log <- function(data = "./data/McDonnell_etal_InPrep_Tr
     xlab(expression(paste("observed tree growth log(kg C ", y^-1," ",ind^-1,")")))+
     ylab(expression(paste("predicted tree growth log(kg C ", y^-1," ",ind^-1,")")))
   
-  return(list(df = mod_assess, plot1 = p1, plot2 = p2))
-    
-  }
+  ggsave(plot = p1, filename = "./visualizations/final_figures/Figure3_supp1.tif",
+         device = "tiff", height = 5, width = 6.6, units = "in",bg = "white")
+  ggsave(plot = p2, filename = "./visualizations/final_figures/Figure3_supp2.tif",
+         device = "tiff", height = 8, width = 8, units = "in",bg = "white") 

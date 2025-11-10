@@ -178,7 +178,7 @@ library(furrr)
 # #write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
 df <- read_csv("./data/processed_data.csv") %>%
-  filter(common_name == "ponderosa pine")
+  dplyr::filter(common_name == "sugar maple")
 
 #total_species <- length(unique(df$common_name))
 #total_species <- c("ponderosa pine","eastern cottonwood")
@@ -204,5 +204,5 @@ source("./modeling_code/ortho_log_t_interaction_adj_priors.R")
 future::plan("future::multisession", workers = 8) # workers is number of sessions
 
 #total_species <- length(unique(df$common_name))
-total_species <- length(c("ponderosa pine"))
+total_species <- length(c("sugar maple"))
 furrr::future_walk(1:total_species, run_model, df, sim)
