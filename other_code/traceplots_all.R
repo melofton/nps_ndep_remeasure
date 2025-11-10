@@ -5,6 +5,12 @@
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
 
+# load packages
+library(tidyverse)
+library(lubridate)
+library(arrow)
+library(ggpubr)
+library(ggthemes)
 library(scales)
 library(bayestestR)
 
