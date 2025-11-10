@@ -12,6 +12,7 @@ library(arrow)
 library(ggpubr)
 library(ggthemes)
 library(stringr)
+library(ggh4x)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
@@ -156,22 +157,87 @@ my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
 
 sp <- unique(df1$species)
 
+plot_data1 <- final_pred %>%
+  filter(!(species == "Betula papyrifera" & ecoregion == "GREAT PLAINS")) %>%
+  filter(!(species == "Betula papyrifera" & ecoregion == "NORTH AMERICAN DESERTS")) %>%
+  filter(!(species == "Populus deltoides" & ecoregion == "NORTHERN FORESTS")) 
+
+plot_data2 <- plot_data1 %>%
+  filter(!species %in% c("Liriodendron tulipifera","Picea rubens","Populus deltoides"))
+
+spp_eco <- plot_data1 %>%
+  select(species, ecoregion) %>%
+  distinct(.)
+
+spp_eco1 <- plot_data2 %>%
+  select(species, ecoregion) %>%
+  distinct(.)
+
+facet_label_letters <- paste0(c(letters,"aa","bb","cc"),".")
+
 facet_label_df <- left_join(df, spp_df, by = "common_name") %>%
   select(species, ecoregion_ortho) %>%
+  rename(ecoregion = ecoregion_ortho) %>%
   distinct() %>%
+  right_join(., spp_eco) %>%
+  arrange(species, ecoregion) %>%
+  mutate(row = row_number()) %>%
+  mutate(labels = facet_label_letters[seq_len(length(unique(row)))]) %>%
   separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
-  separate_wider_delim(ecoregion_ortho, delim = "&", names = c("er1","er2"), too_few = "align_start",cols_remove = FALSE) %>%
-  mutate(ecoregion = ecoregion_ortho,
-         er1 = str_replace_all(er1, " ", "~"),
+  separate_wider_delim(ecoregion, delim = "&", names = c("er1","er2"), too_few = "align_start",cols_remove = FALSE) %>%
+  mutate(er1 = str_replace_all(er1, " ", "~"),
          er2 = str_replace_all(er2, " ", "~"),
          er1 = str_remove(er1, "~$"),
          er2 = str_remove(er2, "^~"),
-         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(",er1, ",",er2,"))")) %>%
+         facet_labels = paste0("atop(italic(",labels,"~",genus,"~",spp,"), atop(",er1, ",",er2,"))")) %>%
   select(species, ecoregion, facet_labels) 
 
-plot_data <- left_join(final_pred, facet_label_df, by = c("species", "ecoregion") )
+nice_labels <- unique(facet_label_df$facet_labels)
 
-nice_labels <- unique(plot_data$facet_labels)
+facet_label_df1 <- left_join(df, spp_df, by = "common_name") %>%
+  select(species, ecoregion_ortho) %>%
+  rename(ecoregion = ecoregion_ortho) %>%
+  distinct() %>%
+  right_join(., spp_eco1) %>%
+  arrange(species, ecoregion) %>%
+  mutate(row = row_number()) %>%
+  mutate(labels = facet_label_letters[seq_len(length(unique(row)))]) %>%
+  separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
+  separate_wider_delim(ecoregion, delim = "&", names = c("er1","er2"), too_few = "align_start",cols_remove = FALSE) %>%
+  mutate(er1 = str_replace_all(er1, " ", "~"),
+         er2 = str_replace_all(er2, " ", "~"),
+         er1 = str_remove(er1, "~$"),
+         er2 = str_remove(er2, "^~"),
+         facet_labels = paste0("atop(italic(",labels,"~",genus,"~",spp,"), atop(",er1, ",",er2,"))")) %>%
+  select(species, ecoregion, facet_labels) 
+
+nice_labels1 <- unique(facet_label_df1$facet_labels)
+
+plot_data <- left_join(plot_data1, facet_label_df, by = c("species", "ecoregion") ) %>%
+  mutate(facet_labels = factor(facet_labels, levels = nice_labels))
+
+plot_data3 <- left_join(plot_data2, facet_label_df1, by = c("species", "ecoregion") ) %>%
+  mutate(facet_labels = factor(facet_labels, levels = nice_labels1))
+
+design1 <- "
+ AB##C##
+ D###EF#
+ G###H##
+ I###J##
+ #KLM#NO
+ PQ#####
+ RS#TUVW
+ XY##Z##
+"
+
+design2 <- "
+ AB#C###
+ D###EF#
+ #GHI#JK
+ LM#NOPQ
+ RS##T##
+"
+
 
   p <- ggplot(data = plot_data)+
     geom_density(aes(x = pred, group = change_type, 
@@ -185,7 +251,49 @@ nice_labels <- unique(plot_data$facet_labels)
     labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
     ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
   
+  p1 <- ggplot(data = plot_data)+
+    geom_density(aes(x = pred, group = change_type, 
+                     color = change_type, fill = change_type),
+                 alpha = 0.5)+
+    facet_manual(~facet_labels, design = design1, scales = "free", labeller = label_parsed)+
+    theme_bw()+
+    scale_color_manual(values = my_col)+
+    scale_fill_manual(values = my_col)+
+    geom_vline(xintercept = 0)+
+    labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
+    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
+  
+  p2 <- ggplot(data = plot_data3)+
+    geom_density(aes(x = pred, group = change_type, 
+                     color = change_type, fill = change_type),
+                 alpha = 0.5)+
+    facet_manual(~facet_labels, design = design2, scales = "free", labeller = label_parsed)+
+    theme_bw()+
+    scale_color_manual(values = my_col)+
+    scale_fill_manual(values = my_col)+
+    geom_vline(xintercept = 0)+
+    labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
+    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
+  
+  p3 <- ggplot(data = plot_data3)+
+    geom_density(aes(x = pred, group = change_type, 
+                     color = change_type, fill = change_type),
+                 alpha = 0.5)+
+    facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
+    theme_bw()+
+    scale_color_manual(values = my_col)+
+    scale_fill_manual(values = my_col)+
+    geom_vline(xintercept = 0)+
+    labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
+    ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
+  
   ggsave(p,filename = "./visualizations/final_figures/Figure5_new.png",
+         device = "png", height = 8, width = 14, units = "in")
+  ggsave(p1,filename = "./visualizations/final_figures/Figure5_new1.png",
+         device = "png", height = 12, width = 16, units = "in")
+  ggsave(p2,filename = "./visualizations/final_figures/Figure5_new2.png",
+         device = "png", height = 10, width = 16, units = "in")
+  ggsave(p3,filename = "./visualizations/final_figures/Figure5_new3.png",
          device = "png", height = 8, width = 14, units = "in")
 p  
   

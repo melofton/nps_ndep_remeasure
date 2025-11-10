@@ -9,8 +9,6 @@ library(scales)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
-growth_change_baseline_log <- function(data){
-  
 # list files in each model output folder
 out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
                    full.names = TRUE)
@@ -178,6 +176,15 @@ for(i in 1:length(spp)){
   
 }
 
+plot_labels <- spp_df %>%
+  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
+  arrange(species) %>%
+  mutate(labels = paste0(letters[seq_len(length(unique(species)))],". ")) 
+
+
+plot_data <- left_join(final_pred, plot_labels, by = "species") %>%
+  mutate(final_labels = paste0(labels, species))
+
   
   plots <- NULL
   
@@ -185,13 +192,14 @@ for(i in 1:length(spp)){
   
   for(j in 1:length(species_list)){
     
-    plot_dat <- final_pred %>%
+    plot_dat <- plot_data %>%
       filter(species == species_list[j]) 
     
     plots[[j]] <- ggplot(data = plot_dat)+
       geom_tile(aes(x = N_ante, y = N_rec, fill = pred))+
       scale_fill_viridis_c()+
-      ggtitle(species_list[j])+
+      geom_hline(yintercept = -1.6, color = "white",linetype = 2)+
+      ggtitle(plot_dat$final_labels[1])+
       theme_bw()+
       xlab(expression(paste("antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")))+
       ylab(expression(paste("recent N dep. change  (kg N ", ha^-1," ",yr^-1,")")))+
@@ -203,7 +211,7 @@ for(i in 1:length(spp)){
 
   
   ggsave(money_plot,filename = "./visualizations/final_figures/Figure6.png",
-         device = "png", scale = 2, bg = "white")
+         device = "png", height = 9, width = 12, units = "in", bg = "white")
   
-}
+
 

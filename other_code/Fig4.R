@@ -15,8 +15,6 @@ library(stringr)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
-marginal_effect_Ndep_antecedent_recent <- function(data){
-  
 # list files in each model output folder
 out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
                    full.names = TRUE)
@@ -59,6 +57,11 @@ df1 <- left_join(df, spp_df, by = "common_name") %>%
             n_trees_ecoregion = n_distinct(tree_ID)) %>%
   mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
   ungroup()
+
+# write csv for Table S2
+tab_s2 <- df1 %>%
+  select(species, ecoregion_ortho, n_trees_ecoregion)
+write.csv(tab_s2, "./data/tab_s2.csv", row.names = FALSE)
 
 # get model predictions for recent N dep changes
 
@@ -215,8 +218,11 @@ mean_growth <- left_join(df, spp_df, by = "common_name") %>%
   group_by(species, common_name) %>%
   summarize(mean_growth = mean(AG_carbon_pYear, na.rm = TRUE)) %>%
   select(species, mean_growth) %>%
+  ungroup() %>%
+  arrange(species) %>%
+  mutate(labels = paste0(letters[seq_len(length(unique(species)))],".")) %>%
   separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
-  mutate(facet_labels = paste0("atop(italic(",genus,"~",spp,"), mean~growth~rate:",round(mean_growth,1),")"))
+  mutate(facet_labels = paste0("atop(italic(",labels,"~",genus,"~",spp,"), mean~growth~rate:",round(mean_growth,1),")"))
 
 plot_data <- left_join(final_pred, mean_growth, by = "species") 
 
@@ -234,11 +240,14 @@ plot_data <- left_join(final_pred, mean_growth, by = "species")
     ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
   
   ggsave(p,filename = "./visualizations/final_figures/Figure4.png",
-         device = "png")
-  
+         device = "png", height = 6.5, width = 7.5, units = "in")
+
+  mean_pred_responses <- final_pred %>%
+    group_by(species, change_type) %>%
+    summarize(mean_pred = mean(pred, na.rm = TRUE))
 
 
 
 
-}
+
 
