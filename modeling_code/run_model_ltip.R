@@ -178,7 +178,8 @@ library(furrr)
 # #write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
 df <- read_csv("./data/processed_data.csv") %>%
-  dplyr::filter(common_name == "ponderosa pine")
+  dplyr::filter(common_name == "ponderosa pine") %>%
+  dplyr::filter(!AG_carbon_pYear < -2000)
 
 #total_species <- length(unique(df$common_name))
 #total_species <- c("ponderosa pine","eastern cottonwood")
