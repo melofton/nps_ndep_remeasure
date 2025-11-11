@@ -184,8 +184,9 @@ run_model <- function(k, df, sim){
                 "nu")
   
   ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=20000, thin = 5)
-  ssFit <- window(ssFit, start = 1001)
-  
+  start.iter <- seq(from = 5005, to = 25000, by = 5)[1001]
+  ssFit <- window(ssFit, start = start.iter)
+
   # get ESS
   ess_vars <- ssFit[, varnames(ssFit) %in% parNames]
   ess <- effectiveSize(ess_vars)
