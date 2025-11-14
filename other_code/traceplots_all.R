@@ -68,7 +68,7 @@ for(i in 1:length(spp)){
   
   param_sum_spp <- current_plot_dat %>%
     group_by(species, params) %>%
-    summarize(mean_param_value = mean(values, na.rm = TRUE))
+    summarize(mean_param_value = signif(mean(values, na.rm = TRUE), digits = 2))
   
 p1 <- ggplot(current_plot_dat, aes(x = .iteration, y = values, group = as.factor(.chain), color = as.factor(.chain)))+
   geom_line()+
