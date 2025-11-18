@@ -11,7 +11,7 @@ library(metR)
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 # list files in each model output folder
-out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
+out <- list.files("./experiments/ortho_t_interaction_adj_priors",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
 # read in and combine files
@@ -67,7 +67,7 @@ for(i in 1:length(common_names)){
   
   model_data <- df1 %>% filter(common_name == common_names[i])
   params <- final1 %>% filter(spp_id == common_names[i],
-                              model_id == "ortho_log_t_interaction_adj_priors")
+                              model_id == "ortho_t_interaction_adj_priors")
   
   Nrange_dat <- df %>%
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
@@ -94,10 +94,8 @@ for(i in 1:length(common_names)){
   
   p5_og <- params$p5 - model_data$c[j] * params$p9
   
-  pred_log <- ((params$global_tree_effect + N_ranges$rec_Ndep*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + N_ranges$ante_Ndep*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + N_ranges$ante_Ndep*N_ranges$rec_Ndep*params$p11 + N_ranges$rec_Ndep*N_ranges$rec_Ndep*params$p12) 
-                        + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-  m2 = exp(pred_log + model_data$log_mean_size[j])
-  pred = m2 - model_data$mean_size[j]
+  pred <- ((params$global_tree_effect + N_ranges$rec_Ndep*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + N_ranges$ante_Ndep*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + N_ranges$ante_Ndep*N_ranges$rec_Ndep*params$p11 + N_ranges$rec_Ndep*N_ranges$rec_Ndep*params$p12) 
+                        * model_data$mean_size[j]^params$p2) * exp(-0*params$p3)
   
   pred_perc = (pred / model_data$mean_size[j]) * 100
   
@@ -227,7 +225,7 @@ mean_levels <- df %>%
   money_plot <- ggarrange(plotlist = plots, ncol = 3, nrow = 3)#, labels = LETTERS[1:length(plots)])
 
   
-  ggsave(money_plot,filename = "./visualizations/final_figures/Figure6.png",
+  ggsave(money_plot,filename = "./visualizations/final_figures/Figure6_otip.png",
          device = "png", height = 9, width = 12, units = "in", bg = "white")
   
 

@@ -244,7 +244,14 @@ plot_data <- left_join(final_pred, mean_growth, by = "species")
 
   mean_pred_responses <- final_pred %>%
     group_by(species, change_type) %>%
-    summarize(mean_pred = mean(pred, na.rm = TRUE))
+    summarize(mean_pred = mean(pred, na.rm = TRUE)) %>%
+    left_join(., mean_growth, by = "species") %>%
+    select(species, change_type, mean_pred, mean_growth) %>%
+    mutate(perc_change = mean_pred / mean_growth * 100) %>%
+    arrange(change_type, perc_change) %>%
+    mutate(change_group = ifelse(species %in% c("Acer saccharum", "Betula papyrifera", "Picea rubens"), 1,
+                                 ifelse(species %in% c("Liriodendron tulipifera", "Populus tremuloides", "Prunus serotina"), 2,
+                                        ifelse(species == "Pinus pondersa", 3, 4))))
 
 
 
