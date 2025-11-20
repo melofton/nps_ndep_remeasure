@@ -228,4 +228,6 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
   ggsave(plot = p1, filename = "./visualizations/final_figures/Figure3_supp1.tif",
          device = "tiff", height = 5, width = 6.6, units = "in",bg = "white")
   ggsave(plot = p2, filename = "./visualizations/final_figures/Figure3_supp2.tif",
-         device = "tiff", height = 8, width = 8, units = "in",bg = "white") 
+         device = "tiff", height = 8, width = 8, units = "in",bg = "white")
+  ggsave(plot = p3, filename = "./visualizations/final_figures/Figure3_supp2_log.tif",
+         device = "tiff", height = 8, width = 8, units = "in",bg = "white")

@@ -184,7 +184,7 @@ df <- read_csv("./data/processed_data.csv") %>%
 total_species <- length(unique(df$common_name))
 #total_species <- c("ponderosa pine","eastern cottonwood")
 
-sim <- "t_interaction_adj_priors"
+sim <- "t_interaction_adj_priors_positive"
 print(sim)
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
