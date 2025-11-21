@@ -75,6 +75,11 @@ focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
 # read in ecoregion info
 ecoreg <- read_csv("./data/plot_ecoregions.csv")
 
+check <- ecoreg %>%
+  group_by(level1_ecoregion) %>%
+  filter(plot_ID %in% focal_df2$plot_ID) %>%
+  summarize(num_plots = n_distinct(plot_ID))
+
 focal_df3 <- left_join(focal_df2, ecoreg, by = c("plot_ID"))
 
 reg <- unique(ecoreg$level1_ecoregion)[!is.na(unique(ecoreg$level1_ecoregion))]
@@ -86,7 +91,7 @@ for(i in 1:length(reg)){
 
   print(reg[i])
 
-  if(i == 5) next
+  if(i == 3) next
   if(i == 9) next
 
   current_dat <- focal_df3 %>%
@@ -98,7 +103,7 @@ for(i in 1:length(reg)){
 
   if(i == 2){
     current_dat <- focal_df3 %>%
-      dplyr::filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[5]) %>%
+      dplyr::filter(level1_ecoregion == reg[i] | level1_ecoregion == reg[3]) %>%
       select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
       distinct(.) %>%
       dplyr::filter(complete.cases(.)) %>%
