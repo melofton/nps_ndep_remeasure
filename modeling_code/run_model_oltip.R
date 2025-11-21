@@ -13,8 +13,7 @@ library(furrr)
 mem.maxVSize(vsize = Inf)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
-  #dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock"))
-  dplyr::filter(common_name %in% c("ponderosa pine")) %>%
+  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
   dplyr::filter(!AG_carbon_pYear < 0)
 #filter(common_name %in% c("eastern cottonwood"))
 
@@ -80,6 +79,8 @@ focal_df3 <- left_join(focal_df2, ecoreg, by = c("plot_ID"))
 
 reg <- unique(ecoreg$level1_ecoregion)[!is.na(unique(ecoreg$level1_ecoregion))]
 
+final <- NULL
+
 #### orthogonalization code
 for(i in 1:length(reg)){
 
@@ -142,10 +143,10 @@ for(i in 1:length(reg)){
   current_dat$Dep_Nhistoric_ortho = scale(astar_n)
   current_dat$Dep_Ndiff_ortho = scale(rtilde_n)
   current_dat$c = c
-  current_dat$Dep_Nhistoric_ortho_mean = mean(scale(astar_n))
-  current_dat$Dep_Nhistoric_ortho_sd = sd(scale(astar_n))
-  current_dat$Dep_Ndiff_ortho_mean = mean(scale(rtilde_n))
-  current_dat$Dep_Ndiff_ortho_sd = sd(scale(rtilde_n))
+  current_dat$Dep_Nhistoric_ortho_mean = mean(astar_n)
+  current_dat$Dep_Nhistoric_ortho_sd = sd(astar_n)
+  current_dat$Dep_Ndiff_ortho_mean = mean(rtilde_n)
+  current_dat$Dep_Ndiff_ortho_sd = sd(rtilde_n)
 
   if(i == 1){
     final <- current_dat

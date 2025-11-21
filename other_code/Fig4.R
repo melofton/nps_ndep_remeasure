@@ -79,6 +79,7 @@ for(i in 1:length(common_names)){
   for(j in 1:length(model_data$ecoregion_ortho)){
   
   p5_og <- params$p5 - model_data$c[j] * params$p9
+  p12_og <- params$p12 - model_data$c[j] * params$p11
   
   pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
                         + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
