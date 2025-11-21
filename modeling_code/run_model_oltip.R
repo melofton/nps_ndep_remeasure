@@ -75,11 +75,6 @@ focal_df2 <- left_join(focal_df, baseline_vars, by = "plot_ID") %>%
 # read in ecoregion info
 ecoreg <- read_csv("./data/plot_ecoregions.csv")
 
-check <- ecoreg %>%
-  group_by(level1_ecoregion) %>%
-  filter(plot_ID %in% focal_df2$plot_ID) %>%
-  summarize(num_plots = n_distinct(plot_ID))
-
 focal_df3 <- left_join(focal_df2, ecoreg, by = c("plot_ID"))
 
 reg <- unique(ecoreg$level1_ecoregion)[!is.na(unique(ecoreg$level1_ecoregion))]
