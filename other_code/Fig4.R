@@ -12,6 +12,13 @@ library(arrow)
 library(ggpubr)
 library(ggthemes)
 library(stringr)
+library(alphahull)
+
+# needed for creating factorial combinations of S and N dep and for orthogonalization
+mem.maxVSize(vsize = Inf)
+
+# needed to convert ashapes into standard polygons so can get grid points
+source("./other_code/hull2poly.R")
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
@@ -50,11 +57,15 @@ df1 <- left_join(df, spp_df, by = "common_name") %>%
   group_by(species, common_name, ecoregion_ortho) %>%
   summarize(log_mean_size = log(mean(AG_carbon_m1, na.rm = TRUE)),
             log_mean_ba_gt = log(mean(subp_BA_GT_m1, na.rm = TRUE) + 1),
-            mean_Dep_Nhistoric = mean(Dep_Nhistoric, na.rm = TRUE),
+            mean_Dep_Nhistoric_SO = mean(Dep_Nhistoric_SO, na.rm = TRUE),
             mean_Dep_Shistoric = mean(Dep_Shistoric, na.rm = TRUE),
             c = mean(c, na.rm = TRUE),
             mean_size = mean(AG_carbon_m1, na.rm = TRUE),
-            n_trees_ecoregion = n_distinct(tree_ID)) %>%
+            n_trees_ecoregion = n_distinct(tree_ID),
+            Dep_Nhistoric_ortho_mean = mean(Dep_Nhistoric_ortho_mean, na.rm = TRUE),
+            Dep_Nhistoric_ortho_sd = mean(Dep_Nhistoric_ortho_sd, na.rm = TRUE),
+            Dep_Ndiff_ortho_mean = mean(Dep_Ndiff_ortho_mean, na.rm = TRUE),
+            Dep_Ndiff_ortho_sd = mean(Dep_Ndiff_ortho_sd, na.rm = TRUE)) %>%
   mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
   ungroup()
 
@@ -81,12 +92,12 @@ for(i in 1:length(common_names)){
   p5_og <- params$p5 - model_data$c[j] * params$p9
   p12_og <- params$p12 - model_data$c[j] * params$p11
   
-  pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
+  pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric_SO[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric_SO[j]*0*params$p11 + 0*0*p12_og) 
                         + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
   m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
   pred_baseline = m2_baseline - model_data$mean_size[j]
   
-  pred_increase_log <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*1*params$p11 + 1*1*params$p12) 
+  pred_increase_log <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric_SO[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric_SO[j]*1*params$p11 + 1*1*p12_og) 
                     + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
   m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
   pred_increase = m2_increase - model_data$mean_size[j]
@@ -123,13 +134,14 @@ for(i in 1:length(common_names)){
   for(j in 1:length(model_data$ecoregion_ortho)){
     
     p5_og <- params$p5 - model_data$c[j] * params$p9
+    p12_og <- params$p12 - model_data$c[j] * params$p11
     
-    pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
+    pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric_SO[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric_SO[j]*0*params$p11 + 0*0*p12_og) 
                           + params$p2*model_data$log_mean_size[j]) - params$p3*log(1) 
     m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
     pred_baseline = m2_baseline - model_data$mean_size[j]
     
-    pred_increase_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + (model_data$mean_Dep_Nhistoric[j]+1)*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + (model_data$mean_Dep_Nhistoric[j]+1)*0*params$p11 + 0*0*params$p12) 
+    pred_increase_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + (model_data$mean_Dep_Nhistoric_SO[j]+1)*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + (model_data$mean_Dep_Nhistoric_SO[j]+1)*0*params$p11 + 0*0*p12_og) 
                           + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
     m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
     pred_increase = m2_increase - model_data$mean_size[j]
@@ -240,7 +252,7 @@ plot_data <- left_join(final_pred, mean_growth, by = "species")
     labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
     ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
   
-  ggsave(p,filename = "./visualizations/final_figures/Figure4.png",
+  ggsave(p,filename = "./visualizations/final_figures/Figure4_test.png",
          device = "png", height = 6.5, width = 7.5, units = "in")
 
   mean_pred_responses <- final_pred %>%

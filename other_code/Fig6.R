@@ -15,9 +15,13 @@ library(stringr)
 library(scales)
 library(metR)
 library(grid)
+library(alphahull)
 
 # needed for creating factorial combinations of S and N dep and for orthogonalization
 mem.maxVSize(vsize = Inf)
+
+# needed to convert ashapes into standard polygons so can get grid points
+source("./other_code/hull2poly.R")
 
 # read in raw data
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
@@ -82,7 +86,15 @@ ecoregions <- unique(df1$ecoregion_ortho)
 final_pred_df <- NULL
 N_ranges <- NULL
 
-# for-loop; first loop through species, then ecoregions
+# vector of alpha values for creating ahulls for each ecoregion
+# these were found through trial and error by running the following:
+# N_ahull <- ahull(x = Nrange_dat$Dep_Nhistoric_SO, 
+#                  y = Nrange_dat$Dep_Ndiff_SO,
+#                  alpha = 3)
+# plot(N_ahull, wpoints = TRUE, col = "blue", do.shape = TRUE)
+alpha_vals <- c(7, 3, 12, 2, 5, 10, 3)
+
+# for-loop; first loop through ecoregions, then species
 for(i in 1:length(ecoregions)){
   
   # where are we
@@ -92,41 +104,51 @@ for(i in 1:length(ecoregions)){
   Nrange_dat <- df %>%
     mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
     filter(ecoregion_ortho == ecoregions[i]) %>%
-    select(plot_ID, ecoregion_ortho, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
+    select(plot_ID, ecoregion_ortho, Dep_Nhistoric_SO, Dep_Ndiff_SO) %>%
     distinct(.)
   
-  # orthogonalization to SO space
-  r_s = Nrange_dat$Dep_Sdiff 
+  # get alpha convex hull
+  eco_ashape <- ashape(x = Nrange_dat$Dep_Nhistoric_SO, 
+                             y = Nrange_dat$Dep_Ndiff_SO,
+                             alpha = alpha_vals[i])
   
-  a_s = Nrange_dat$Dep_Shistoric 
+  # convert to regular polygon
+  eco_poly <- hull2poly(eco_ashape)
   
-  r_n = Nrange_dat$Dep_Ndiff 
+  # get grid polygons
+  grid_polygons <- st_make_grid(eco_poly, 
+                                cellsize = c(0.1, 0.1), # Define the size of grid cells
+                                what = "polygons") |> 
+    st_sf() # Convert to an sf object
   
-  a_n = Nrange_dat$Dep_Nhistoric 
+  # filter grid cells that intersect with the ashape polygon
+  grid_within_ahull <- st_intersection(grid_polygons, eco_poly)
   
-  n_s = length(r_s)
-  n_n = length(r_n)
+  # convert the resulting grid polygons to centroids
+  grid_points <- st_centroid(grid_within_ahull)
   
-  S = cbind(1, r_s, a_s) # design matrix needs to include intercept [1, S]
-  P_s = diag(n_s) - (S %*% solve(t(S) %*% S, t(S))) # projection onto span{1,S}
+  # convert to dataframe
+  N_grid <- data.frame(st_coordinates(grid_points)) %>%
+    rename(Dep_Nhistoric_SO = X,
+           Dep_Ndiff_SO = Y) %>%
+    add_row(Dep_Nhistoric_SO = c(0),
+            Dep_Ndiff_SO = c(0)) 
   
-  rtilde_n = as.numeric(P_s %*% r_n)
-  atilde_n = as.numeric(P_s %*% a_n)
+  # map from SO to DO
+  rtilde_n = N_grid$Dep_Ndiff_SO
+  atilde_n = N_grid$Dep_Nhistoric_SO
   
-  # # get min and max of SO N dep values
-  # min_ante_Ndep_SO = min(atilde_n, na.rm = TRUE)
-  # max_ante_Ndep_SO = max(atilde_n, na.rm = TRUE)
-  # min_rec_Ndep_SO = min(rtilde_n, na.rm = TRUE)
-  # max_rec_Ndep_SO = max(rtilde_n, na.rm = TRUE)
-  # 
-  # # get ranges of SO N dep values to expand grid
-  # ante_Ndep_values_SO = seq(min_Nhistoric, max_Nhistoric, by = 0.1)
-  # rec_Ndep_values_SO = seq(min_Ndiff, max_Ndiff, by = 0.1)
-  # 
-  # # put into dataframe
-  # N_ranges <- expand.grid(ante_Ndep_SO = atilde_n, rec_Ndep_SO = rtilde_n) %>%
-  #   add_column(ecoregion_ortho = ecoregions[i]) %>%
-  #   filter(ante_Ndep_SO + rec_Ndep_SO >= 0)
+  n_n = length(rtilde_n)
+  
+  P_n = diag(n_n) - (rtilde_n %*% solve(t(rtilde_n) %*% rtilde_n, t(rtilde_n)))
+  
+  astar_n = as.numeric(P_n %*% atilde_n)
+  
+  N_grid$Dep_Nhistoric_DO_scaled = scale(astar_n)
+  N_grid$Dep_Ndiff_DO_scaled = scale(rtilde_n)
+  
+  baseline_N_DO_values <- N_grid %>%
+    filter(Dep_Ndiff_SO == 0 & Dep_Nhistoric_SO == 0)
   
   # get names of species in that ecoregion
   common_names = df %>%
@@ -151,15 +173,28 @@ for(i in 1:length(ecoregions)){
     
     # back transformation of model parameters to SO space
     # p5 is coefficient on recent N dep; p12 is coefficient on recent N dep quadratic term
-    p5_so <- params$p5 - model_data$c * params$p9
-    p12_so <- params$p12 - model_data$c * params$p11
+    # this is not needed if we work in DO space
+    # p5_so <- params$p5 - model_data$c * params$p9
+    # p12_so <- params$p12 - model_data$c * params$p11
+    
+    # get baseline model predictions!
+    pred_log_baseline <- ((params$global_tree_effect + baseline_N_DO_values$Dep_Ndiff_DO_scaled*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8 + baseline_N_DO_values$Dep_Nhistoric_DO_scaled*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + baseline_N_DO_values$Dep_Nhistoric_DO_scaled*baseline_N_DO_values$Dep_Ndiff_DO_scaled*params$p11 + baseline_N_DO_values$Dep_Ndiff_DO_scaled*baseline_N_DO_values$Dep_Ndiff_DO_scaled*params$p12) 
+                 + params$p2*model_data$log_mean_size) - params$p3*log(1)
+    
+    # exponentiate from log space and calculate percent increase/decrease in growth
+    m2_baseline = exp(pred_log_baseline + model_data$log_mean_size)
+    pred_baseline = m2_baseline - model_data$mean_size
+    pred_baseline <- pred_baseline[1,1]
   
-    # get model predictions!
-    pred_log <- ((params$global_tree_effect + rtilde_n*p5_so + 0*params$p6 + 0*params$p7 + 0*params$p8 + atilde_n*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + atilde_n*rtilde_n*params$p11 + rtilde_n*rtilde_n*p12_so) 
+    # get other model predictions!
+    pred_log <- ((params$global_tree_effect + N_grid$Dep_Ndiff_DO_scaled*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8 + N_grid$Dep_Nhistoric_DO_scaled*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + N_grid$Dep_Nhistoric_DO_scaled*N_grid$Dep_Ndiff_DO_scaled*params$p11 + N_grid$Dep_Ndiff_DO_scaled*N_grid$Dep_Ndiff_DO_scaled*params$p12) 
                         + params$p2*model_data$log_mean_size) - params$p3*log(1)
   
-    # exponentiate from log space and calculate percent growth
-    pred_perc = 100*(exp(1*pred_log) - 1)
+    # exponentiate from log space and calculate percent increase/decrease in growth
+    m2 = exp(pred_log + model_data$log_mean_size)
+    pred = m2 - model_data$mean_size
+    
+    pred_perc = (pred - pred_baseline) / pred_baseline * 100
 
     # assemble final df for this species-ecoregion combination
     pred_df <- data.frame(species = model_data$species[1],
@@ -167,8 +202,9 @@ for(i in 1:length(ecoregions)){
                           ecoregion = model_data$ecoregion_ortho[1],
                           pred = pred_perc,
                           pred_log = pred_log,
-                          N_ante_SO = atilde_n,
-                          N_rec_SO = rtilde_n)
+                          pred_baseline = pred_baseline,
+                          N_ante_SO = N_grid$Dep_Nhistoric_SO,
+                          N_rec_SO = N_grid$Dep_Ndiff_SO)
   
     if(i == 1 & j == 1){
       final_pred_df <- pred_df
@@ -183,63 +219,72 @@ for(i in 1:length(ecoregions)){
 ###### different attempt at figure
 
 facet_label_df <- final_pred_df %>%
-  select(species, ecoregion) %>%
-  distinct() %>%
+  select(species, ecoregion, pred_baseline) %>%
+  distinct(.) %>%
+  mutate(pred_baseline = round(pred_baseline, 2)) %>%
   separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
   separate_wider_delim(ecoregion, delim = "&", names = c("er1","er2"), too_few = "align_start",cols_remove = FALSE) %>%
   mutate(er1 = str_replace_all(er1, " ", "~"),
          er2 = str_replace_all(er2, " ", "~"),
          er1 = str_remove(er1, "~$"),
          er2 = str_remove(er2, "^~"),
-         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(",er1, ",",er2,"))")) %>%
-  select(species, ecoregion, facet_labels) 
+         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~N~ind^-1~yr^-1))")) %>%
+  select(species, ecoregion, facet_labels)
 
-plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") )
+plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%
+  arrange(species)
 
 plots <- NULL
 
-species_list <- unique(final_pred_df$species)
+species_list <- unique(plot_data$species)
 
 l=1
 
 for(j in 1:length(species_list)){
   
+  most_n_eco <- df1 %>%
+    filter(species == species_list[j]) %>%
+    filter(n_trees_ecoregion == max(n_trees_ecoregion)) %>%
+    pull(ecoregion_ortho)
+  
+  mean_growth_eco <- df1 %>%
+    filter(species == species_list[j]) %>%
+    filter(n_trees_ecoregion == max(n_trees_ecoregion)) %>%
+    pull(mean_perc_growth) %>%
+    round(., 1)
+  
   plot_dat <- plot_data %>%
-    filter(species == species_list[j])
+    filter(species == species_list[j] & ecoregion == most_n_eco)
   
-  ecoreg <- unique(plot_dat$ecoregion)
-  
-  for(k in 1:length(ecoreg)){
-    
-    plot_dat2 <- plot_dat %>%
-      filter(ecoregion == ecoreg[k]) 
-    
-    plots[[l]] <- ggplot(data = plot_dat2)+
+    plots[[l]] <- ggplot(data = plot_dat)+
       geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = pred, color = pred), shape = 21)+
       scale_fill_viridis_c()+
       scale_color_viridis_c()+
       facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
       theme_bw()+
-      xlab(expression(paste("antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")))+
+      xlab(c)+
       ylab(expression(paste("recent N dep. change  (kg N ", ha^-1," ",yr^-1,")")))+
-      labs(fill = "growth (%)", color = "growth (%)")+
+      labs(fill = "% change \nin growth", color = "% change \nin growth")+
       xlab(NULL)+
-      ylab(NULL)
+      ylab(NULL)+
+      geom_hline(yintercept = 0, linetype = 2)+
+      geom_vline(xintercept = 0, linetype = 2)+
+      theme(strip.text = element_text(size = 15),
+            panel.grid = element_blank())
     l <- l + 1
-  }
   
 }
 
-money_plot <- ggarrange(plotlist = plots, ncol = 6, nrow = 5)#, labels = LETTERS[1:length(plots)])
+money_plot <- ggarrange(plotlist = plots, ncol = 3, nrow = 3)#, labels = LETTERS[1:length(plots)])
 
 final_plot <- annotate_figure(
   money_plot,
-  left = textGrob(expression(paste("recent N dep. change in SO units")), rot = 90, gp = gpar(cex = 1.3)),
-  bottom = textGrob(expression(paste("antecedent N deposition in SO units")), gp = gpar(cex = 1.3))
+  left = textGrob(expression(paste("residual recent N deposition (kg N ", ha^-1," ",yr^-1,")")), rot = 90, gp = gpar(cex = 1.3)),
+  bottom = textGrob(expression(paste("residual antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")), gp = gpar(cex = 1.3))
 )
 
-ggsave(final_plot,filename = "./visualizations/final_figures/Figure6_test.png",
-       device = "png", bg = "white", height = 10, width = 18, units = "in")
+ggsave(final_plot,filename = "./visualizations/final_figures/Figure6.png",
+       device = "png", bg = "white", height = 9, width = 12, units = "in")
 
 
 
@@ -345,7 +390,7 @@ mean_levels <- df %>%
       theme_bw()+
       xlab(expression(paste("antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")))+
       ylab(expression(paste("recent N dep. change  (kg N ", ha^-1," ",yr^-1,")")))+
-      labs(fill = "growth (%)")
+      labs(fill = "% change in growth")
     
   }
   

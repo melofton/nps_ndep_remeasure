@@ -102,7 +102,7 @@ for(i in 1:length(reg)){
       select(level1_ecoregion, plot_ID, Dep_Shistoric, Dep_Sdiff, Dep_Nhistoric, Dep_Ndiff) %>%
       distinct(.) %>%
       dplyr::filter(complete.cases(.)) %>%
-      mutate(ecoregion_ortho = paste(reg[i],reg[5],sep = " & "))
+      mutate(ecoregion_ortho = paste(reg[i],reg[3],sep = " & "))
   }
   if(i == 8){
     current_dat <- focal_df3 %>%
@@ -147,6 +147,8 @@ for(i in 1:length(reg)){
   current_dat$Dep_Nhistoric_ortho_sd = sd(astar_n)
   current_dat$Dep_Ndiff_ortho_mean = mean(rtilde_n)
   current_dat$Dep_Ndiff_ortho_sd = sd(rtilde_n)
+  current_dat$Dep_Nhistoric_SO = atilde_n
+  current_dat$Dep_Ndiff_SO = rtilde_n
 
   if(i == 1){
     final <- current_dat
