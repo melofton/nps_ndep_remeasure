@@ -218,9 +218,13 @@ for(i in 1:length(ecoregions)){
 
 ###### different attempt at figure
 
+letters_df <- data.frame(species = sort(unique(final_pred_df$species)),
+                         letters = paste0(letters[seq_len(length(unique(final_pred_df$species)))],"."))
+
 facet_label_df <- final_pred_df %>%
   select(species, ecoregion, pred_baseline) %>%
   distinct(.) %>%
+  left_join(., letters_df, by = "species") %>%
   mutate(pred_baseline = round(pred_baseline, 2)) %>%
   separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
   separate_wider_delim(ecoregion, delim = "&", names = c("er1","er2"), too_few = "align_start",cols_remove = FALSE) %>%
@@ -228,7 +232,7 @@ facet_label_df <- final_pred_df %>%
          er2 = str_replace_all(er2, " ", "~"),
          er1 = str_remove(er1, "~$"),
          er2 = str_remove(er2, "^~"),
-         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~C~y^-1~ind^-1))")) %>%
+         facet_labels = paste0("atop(italic(",letters,"~",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~C~y^-1~ind^-1))")) %>%
   select(species, ecoregion, facet_labels)
 
 plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%
@@ -258,8 +262,8 @@ for(j in 1:length(species_list)){
   
     plots[[l]] <- ggplot(data = plot_dat)+
       geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = pred, color = pred), shape = 21)+
-      scale_fill_viridis_c()+
-      scale_color_viridis_c()+
+      scale_fill_viridis_c(direction = -1)+
+      scale_color_viridis_c(direction = -1)+
       facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
       theme_bw()+
       xlab(c)+
@@ -283,122 +287,5 @@ final_plot <- annotate_figure(
   bottom = textGrob(expression(paste("residual antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")), gp = gpar(cex = 1.3))
 )
 
-ggsave(final_plot,filename = "./visualizations/final_figures/Figure6.png",
-       device = "png", bg = "white", height = 9, width = 12, units = "in")
-
-
-
-##################################
-
-
-# get weighted average of predictions
-df2 <- df1 %>%
-  group_by(species, common_name) %>%
-  summarize(n_trees_total = sum(n_trees_ecoregion))
-
-spp <- unique(df1$species)
-
-for(i in 1:length(spp)){
-  
-  n_trees_total <- df2 %>%
-    filter(species == spp[i]) %>%
-    pull(n_trees_total)
-  
-  n_trees_ecoregion <- df1 %>%
-    filter(species == spp[i]) %>%
-    select(ecoregion_ortho, n_trees_ecoregion)
-  
-  tree_ecos <- unique(n_trees_ecoregion$ecoregion_ortho)
-  
-  for(j in 1:length(tree_ecos)){ 
-    
-    species_pred_eco <- final_pred_df %>%
-      filter(species == spp[i] & ecoregion == tree_ecos[j]) %>%
-      pull(pred)
-    
-    n_trees_this_eco <- n_trees_ecoregion %>%
-      filter(ecoregion_ortho == tree_ecos[j]) %>%
-      pull(n_trees_ecoregion)
-    
-    adj_pred <- species_pred_eco*n_trees_this_eco / n_trees_total
-
-    if(j == 1){
-      pred <- adj_pred
-    } else {
-      pred <- pred + adj_pred
-    }
-    
-  }
-  
-  spp_N_ranges <- final_pred_df %>%
-    filter(species == spp[i] & ecoregion == tree_ecos[j])
-  
-  final_pred_species <- data.frame(species = spp[i],
-                                   pred = pred,
-                                   N_ante_SO = spp_N_ranges$N_ante_SO,
-                                   N_rec_SO = spp_N_ranges$N_rec_SO)
-  
-  if(i == 1){
-    final_pred <- final_pred_species
-  } else {
-    final_pred <- bind_rows(final_pred, final_pred_species)
-  }
-  
-  
-  
-}
-
-plot_labels <- spp_df %>%
-  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
-  arrange(species) %>%
-  mutate(labels = paste0(letters[seq_len(length(unique(species)))],". ")) 
-
-plot_data <- left_join(final_pred, plot_labels, by = "species") %>%
-  mutate(final_labels = paste0(labels, species))
-
-mean_levels <- df %>%
-  select(common_name, Dep_Ndiff, Dep_Nhistoric, plot_ID) %>%
-  distinct(.) %>%
-  group_by(common_name) %>%
-  summarize(Dep_Ndiff_mean = mean(Dep_Ndiff, na.rm = TRUE),
-            Dep_Nhistoric_mean = mean(Dep_Nhistoric, na.rm = TRUE)) %>%
-  left_join(spp_df, by = "common_name")
-  
-  plots <- NULL
-  
-  species_list <- unique(final_pred$species)
-  
-  for(j in 1:length(species_list)){
-    
-    plot_dat <- plot_data %>%
-      filter(species == species_list[j]) 
-    
-    spp_mean_levels <- mean_levels %>%
-      filter(species == species_list[j])
-    
-    plots[[j]] <- ggplot()+
-      geom_tile(data = plot_dat, aes(x = N_ante, y = N_rec, fill = pred))+
-      geom_contour(data = plot_dat, aes(x = N_ante, y = N_rec, z = pred), color = "lightgray", alpha = 0.3)+
-      metR::geom_text_contour(data = plot_dat, aes(x = N_ante, y = N_rec, z = pred),
-                              label.placer = label_placer_fraction(frac = 0.5),
-                              size = 3,
-                              color = "lightgray")+
-      scale_fill_viridis_c()+
-      #geom_hline(yintercept = spp_mean_levels$Dep_Ndiff_mean, color = "white",linetype = 2)+
-      #geom_vline(xintercept = spp_mean_levels$Dep_Nhistoric_mean, color = "white",linetype = 2)+
-      ggtitle(plot_dat$final_labels[1])+
-      theme_bw()+
-      xlab(expression(paste("antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")))+
-      ylab(expression(paste("recent N dep. change  (kg N ", ha^-1," ",yr^-1,")")))+
-      labs(fill = "% change in growth")
-    
-  }
-  
-  money_plot <- ggarrange(plotlist = plots, ncol = 3, nrow = 3)#, labels = LETTERS[1:length(plots)])
-
-  
-  ggsave(money_plot,filename = "./visualizations/final_figures/Figure6_test2.png",
-         device = "png", height = 9, width = 12, units = "in", bg = "white")
-  
-
-
+ggsave(final_plot,filename = "./visualizations/final_figures/Figure3.png",
+       device = "png", bg = "white", height = 9, width = 13, units = "in")

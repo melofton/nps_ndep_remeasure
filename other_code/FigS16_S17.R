@@ -208,6 +208,9 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
   p2 <- ggplot(data = df3)+
     geom_point(aes(x = AG_carbon_pYear, y = pred))+
     geom_abline(slope = 1)+
+    geom_smooth(method = "lm", formula = y ~ x, se = FALSE)+
+    stat_regline_equation(label.x = "right", label.y = "top")+ # Adds equation
+    stat_cor(method = "pearson", label.x = "left", label.y = "top")+ # Adds R and P-value
     theme_bw()+
     theme(legend.position = "none")+
     #ggtitle("Displaying repeated measures")+
@@ -225,9 +228,9 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
     xlab(expression(paste("observed tree growth log(kg C ", y^-1," ",ind^-1,")")))+
     ylab(expression(paste("predicted tree growth log(kg C ", y^-1," ",ind^-1,")")))
   
-  ggsave(plot = p1, filename = "./visualizations/final_figures/FigureS16.tif",
+  ggsave(plot = p1, filename = "./visualizations/final_figures/FigureS17.tif",
          device = "tiff", height = 5, width = 6.6, units = "in",bg = "white")
-  ggsave(plot = p2, filename = "./visualizations/final_figures/FigureS15.tif",
+  ggsave(plot = p2, filename = "./visualizations/final_figures/FigureS16.tif",
          device = "tiff", height = 8, width = 8, units = "in",bg = "white")
   ggsave(plot = p3, filename = "./visualizations/final_figures/Figure3_supp2_log.tif",
          device = "tiff", height = 8, width = 8, units = "in",bg = "white")

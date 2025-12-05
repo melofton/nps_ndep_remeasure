@@ -49,7 +49,7 @@ p1 <- ggplot(plot_dat, aes(x = .iteration, y = nu, group = as.factor(.chain), co
   xlab("iteration")+
   ylab(expression(paste(nu)))
   
-  ggsave(p1,filename = "./visualizations/final_figures/nu_traceplot.png",
+  ggsave(p1,filename = "./visualizations/final_figures/FigS18.png",
          device = "png", bg = "white", height = 7, width = 7.5, units = "in")
   
 

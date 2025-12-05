@@ -3,7 +3,7 @@
 # Date: 14NOV25
 
 # list ess files in model output folder
-out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "ess",
+out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "ess.csv",
                   full.names = TRUE)
 
 # get species names

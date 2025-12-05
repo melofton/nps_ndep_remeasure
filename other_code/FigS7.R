@@ -95,7 +95,7 @@ N_ranges <- NULL
 alpha_vals <- c(7, 3, 12, 2, 5, 10, 3)
 
 # for-loop; first loop through ecoregions, then species
-tiff(file = file.path("./visualizations/final_figures/Fig6_supp2.png"),
+tiff(file = file.path("./visualizations/final_figures/FigureS7.png"),
      width = 8, height = 12, units = "in", res = 300)
 par(mfrow = c(4,2))#,mgp = c(2.5,1,0), mar = c(3,4,2,0)+0.1)
 
