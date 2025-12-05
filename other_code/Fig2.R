@@ -158,33 +158,8 @@ fig2_b <- ggplot()+
 
 fig2_b
 
-
-# # B. timeseries of short-term differences in N deposition by plot and ecoregion
-# 
-# dat_b <- df %>%
-#   select(plot_ID, date_m1, Dep_Ndiff, ecoregion_ortho) %>%
-#   distinct(.) 
-# 
-# ortho_ecoregions <- unique(dat_b$ecoregion_ortho)
-# 
-# fig2_plotlist <- list()
-# 
-# for(i in 1:length(ortho_ecoregions)){
-#   
-#   dat_plot <- dat_b %>%
-#     filter(ecoregion_ortho == ortho_ecoregions[i])
-#   
-#   fig2_plotlist[[i]] <- ggplot(dat_plot, aes(x = date_m1, y = Dep_Ndiff, group = plot_ID)) + 
-#     geom_line(color = "gray") +
-#     geom_point(color = "black") +
-#     theme_classic() +
-#     geom_hline(yintercept = 0, color = "blue") +
-#     ylab(expression(paste(Delta," N dep. (kg N ", ha^-1," ",y^-1,")"))) +
-#     xlab("measurement period start date") + 
-#     ggtitle(str_wrap(ortho_ecoregions[i], width = 30))
-#   
-# }
-
+ggsave(plot = fig2_b, filename = "./visualizations/final_figures/Figure2b.tif",
+       device = "tiff", height = 4, width = 7, units = "in", bg = "white")
 
 # Assemble figure
 
@@ -195,3 +170,75 @@ p2 <- ggarrange(fig2_a, fig2_b,
 p2
 ggsave(plot = p2, filename = "./visualizations/final_figures/Figure2.tif",
        device = "tiff", height = 8, width = 7.5, units = "in", bg = "white")
+
+# Additional figure versions for CLAD presentation
+
+fig2_b_1 <- ggplot()+
+  geom_vline(data = interval_starts, aes(xintercept = datetime, linetype = measurement_time, alpha = measurement_time), color = "gray")+
+  geom_line(data = subset(plot_data2, dep_type == "Dep_Nhistoric" & interval_no == 1), aes(x = datetime, y = Dep_N, group = interval_no_by_type, color = as.factor(interval_no), alpha = dep_type, linetype = dep_type), linewidth = 1)+
+  geom_point(data = subset(plot_data2, dep_type == "Dep_Nhistoric" & interval_no == 1), aes(x = datetime, y = Dep_N, group = interval_no_by_type, color = as.factor(interval_no)))+
+  #geom_segment(data = diffs, aes(x = date_m1, y = Dep_Nhistoric, xend = date_m1, yend = Dep_N, color = as.factor(interval_no), linewidth = linewidth_var), arrow = arrow(length = unit(0.2,"cm")))+
+  theme_classic()+
+  scale_color_discrete(name = "Measurement interval")+
+  scale_alpha_manual(values = c(date_m1 = 1, Dep_Nhistoric = 1), name = NULL, labels = c("measurement \ninterval start date","antecedent N dep."))+
+  scale_linetype_manual(values = c(date_m1 = 2, Dep_Nhistoric = 1), name = NULL, labels = c("measurement \ninterval start date","antecedent N dep."))+
+  scale_linewidth_manual(values = c("Dep_Ndiff" = 0.5), name = NULL, labels = c("short-term change in N dep."))+
+  xlab("")+
+  ylab(expression(paste("N deposition (kg N ", ha^-1," ",y^-1,")")))+
+  theme(legend.spacing.y = unit(0.0, "cm"),
+        legend.key.width = unit(3, "line"),
+        legend.key.height = unit(1.5, "line"))+
+  guides(
+    color = guide_legend(order = 1),
+    linetype = guide_legend(override.aes = list(
+      linetype = c(2, 1), # Example values
+      alpha = c(1, 1) # Example values
+    ), reverse = TRUE),
+    alpha = guide_legend(override.aes = list(
+      linetype = c(1, 2), # Example values
+      alpha = c(1, 1) # Example values
+    ), reverse = TRUE),
+    linewidth = guide_legend(order = 4)
+  )+
+  xlim(c(min(plot_data2$datetime_ante_start), max(plot_data2$datetime)))+
+  ylim(c(min(plot_data2$Dep_N), max(plot_data2$Dep_N)))
+
+fig2_b_1
+
+ggsave(plot = fig2_b_1, filename = "./visualizations/final_figures/Figure2b_1.tif",
+       device = "tiff", height = 4, width = 6.5, units = "in", bg = "white")
+
+fig2_b_2 <- ggplot()+
+  geom_vline(data = interval_starts, aes(xintercept = datetime, linetype = measurement_time, alpha = measurement_time), color = "gray")+
+  geom_line(data = subset(plot_data2, dep_type == "Dep_Nhistoric"), aes(x = datetime, y = Dep_N, group = interval_no_by_type, color = as.factor(interval_no), alpha = dep_type, linetype = dep_type), linewidth = 1)+
+  geom_point(data = subset(plot_data2, dep_type == "Dep_Nhistoric"), aes(x = datetime, y = Dep_N, group = interval_no_by_type, color = as.factor(interval_no)))+
+  #geom_segment(data = diffs, aes(x = date_m1, y = Dep_Nhistoric, xend = date_m1, yend = Dep_N, color = as.factor(interval_no), linewidth = linewidth_var), arrow = arrow(length = unit(0.2,"cm")))+
+  theme_classic()+
+  scale_color_discrete(name = "Measurement interval")+
+  scale_alpha_manual(values = c(date_m1 = 1, Dep_Nhistoric = 1), name = NULL, labels = c("measurement \ninterval start date","antecedent N dep."))+
+  scale_linetype_manual(values = c(date_m1 = 2, Dep_Nhistoric = 1), name = NULL, labels = c("measurement \ninterval start date","antecedent N dep."))+
+  scale_linewidth_manual(values = c("Dep_Ndiff" = 0.5), name = NULL, labels = c("short-term change in N dep."))+
+  xlab("")+
+  ylab(expression(paste("N deposition (kg N ", ha^-1," ",y^-1,")")))+
+  theme(legend.spacing.y = unit(0.0, "cm"),
+        legend.key.width = unit(3, "line"),
+        legend.key.height = unit(1.5, "line"))+
+  guides(
+    color = guide_legend(order = 1),
+    linetype = guide_legend(override.aes = list(
+      linetype = c(2, 1), # Example values
+      alpha = c(1, 1) # Example values
+    ), reverse = TRUE),
+    alpha = guide_legend(override.aes = list(
+      linetype = c(1, 2), # Example values
+      alpha = c(1, 1) # Example values
+    ), reverse = TRUE),
+    linewidth = guide_legend(order = 4)
+  )+
+  xlim(c(min(plot_data2$datetime_ante_start), max(plot_data2$datetime)))+
+  ylim(c(min(plot_data2$Dep_N), max(plot_data2$Dep_N)))
+
+fig2_b_2
+
+ggsave(plot = fig2_b_2, filename = "./visualizations/final_figures/Figure2b_2.tif",
+       device = "tiff", height = 4, width = 6.5, units = "in", bg = "white")

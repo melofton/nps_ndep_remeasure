@@ -129,8 +129,8 @@ for(i in 1:length(ecoregions)){
   N_grid <- data.frame(st_coordinates(grid_points)) %>%
     rename(Dep_Nhistoric_SO = X,
            Dep_Ndiff_SO = Y) %>%
-    add_row(Dep_Nhistoric_SO = c(0,0,1),
-            Dep_Ndiff_SO = c(0,1,0)) 
+    add_row(Dep_Nhistoric_SO = c(0,0,-1),
+            Dep_Ndiff_SO = c(0,-1,0)) 
   
   # map from SO to DO
   rtilde_n = N_grid$Dep_Ndiff_SO
@@ -146,9 +146,9 @@ for(i in 1:length(ecoregions)){
   N_grid$Dep_Ndiff_DO_scaled = scale(rtilde_n)
   
   st_N_DO_values <- N_grid %>%
-    filter(Dep_Ndiff_SO %in% c(0,1) & Dep_Nhistoric_SO == 0)
+    filter(Dep_Ndiff_SO %in% c(0,-1) & Dep_Nhistoric_SO == 0)
   lt_N_DO_values <- N_grid %>%
-    filter(Dep_Ndiff_SO == 0 & Dep_Nhistoric_SO %in% c(0,1))
+    filter(Dep_Ndiff_SO == 0 & Dep_Nhistoric_SO %in% c(0,-1))
   
   # get names of species in that ecoregion
   common_names = df %>%
@@ -240,7 +240,7 @@ facet_label_df <- final_pred_df %>%
          er2 = str_replace_all(er2, " ", "~"),
          er1 = str_remove(er1, "~$"),
          er2 = str_remove(er2, "^~"),
-         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~N~ind^-1~yr^-1))")) %>%
+         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~C~y^-1~ind^-1))")) %>%
   select(species, ecoregion, facet_labels)
 
 df2 <- df1 %>%
@@ -296,7 +296,7 @@ p <- ggplot(data = plot_data)+
   scale_fill_manual(values = my_col)+
   geom_vline(xintercept = 0)+
   labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-  ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))+
+  ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
   theme(strip.text = element_text(size = 12))
 
 ggsave(p,filename = "./visualizations/final_figures/Figure4_test.png",
@@ -312,6 +312,116 @@ mean_pred_responses <- final_pred %>%
   mutate(change_group = ifelse(species %in% c("Acer saccharum", "Betula papyrifera", "Picea rubens"), 1,
                                ifelse(species %in% c("Liriodendron tulipifera", "Populus tremuloides", "Prunus serotina"), 2,
                                       ifelse(species == "Pinus pondersa", 3, 4))))
+
+##### code for quadrant figure
+plot_data2 <- plot_data %>%
+  group_by(species, change_type, ecoregion) %>%
+  summarize(pred = mean(pred, na.rm = TRUE)) %>%
+  pivot_wider(names_from = change_type, values_from = pred) %>%
+  add_column(spp_abbrevs = c("Acsa","Bepa","Litu","Piru","Pipo","Pode","Potr","Prse"))
+
+plot_data3 <- final_pred_df %>%
+  select(species, ecoregion, pred_baseline) %>%
+  distinct(.) %>%
+  mutate(pred_baseline = round(pred_baseline, 2))
+
+plot_data4 <- left_join(plot_data2, plot_data3, by = c("species","ecoregion")) %>%
+  mutate(antecedent = antecedent / pred_baseline * 100,
+         `short-term` = `short-term` / pred_baseline * 100)
+
+
+quad00 <- ggplot(data = plot_data4, aes(x = antecedent, y = `short-term`, group = species))+
+  #geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point(color = "white")+
+  #geom_label(aes(label = spp_abbrevs))+
+  #xlim(c(-0.4, 0.4))+
+  #ylim(c(-0.4, 0.4))+
+  theme_classic()+
+  ylab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," short-term N dep. decrease")))+
+  xlab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," antecedent N dep. decrease")))+
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        axis.line.y = element_line(color = "white"),
+        axis.text.y = element_text(color = "white"),
+        axis.title.y = element_text(color = "white"),
+        axis.ticks.y = element_line(color = "white"))
+
+quad00
+
+ggsave(quad00,filename = "./visualizations/quad_figure00.png",
+       device = "png", height = 8, width = 8, units = "in")
+
+quad0 <- ggplot(data = plot_data4, aes(x = antecedent, y = `short-term`, group = species))+
+  #geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point()+
+  geom_label(aes(label = spp_abbrevs, fill = ecoregion))+
+  #xlim(c(-0.4, 0.4))+
+  #ylim(c(-0.4, 0.4))+
+  theme_classic()+
+  ylab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," short-term N dep. decrease")))+
+  xlab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," antecedent N dep. decrease")))+
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        axis.line.y = element_line(color = "white"),
+        axis.text.y = element_text(color = "white"),
+        axis.title.y = element_text(color = "white"),
+        axis.ticks.y = element_line(color = "white"),
+        legend.position = "none")
+
+quad0
+
+ggsave(quad0,filename = "./visualizations/quad_figure0.png",
+       device = "png", height = 8, width = 8, units = "in")
+
+quad <- ggplot(data = plot_data4, aes(x = antecedent, y = `short-term`, group = species))+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point()+
+  geom_label(aes(label = spp_abbrevs, fill = ecoregion))+
+  #xlim(c(-0.4, 0.4))+
+  #ylim(c(-0.4, 0.4))+
+  theme_classic()+
+  ylab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," short-term N dep. decrease")))+
+  xlab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," antecedent N dep. decrease")))+
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        legend.position = "none")
+
+quad
+
+ggsave(quad,filename = "./visualizations/quad_figure.png",
+       device = "png", height = 8, width = 8, units = "in")
+
+quad_leg_plot <- ggplot(data = plot_data4, aes(x = antecedent, y = `short-term`, group = species))+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point()+
+  geom_label(aes(label = spp_abbrevs, fill = ecoregion))+
+  #xlim(c(-0.4, 0.4))+
+  #ylim(c(-0.4, 0.4))+
+  theme_classic()+
+  ylab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," short-term N dep. decrease")))+
+  xlab(expression(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1," antecedent N dep. decrease")))+
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18))+
+  scale_fill_discrete(name = "Ecoregion",
+                      labels = function(x) str_wrap(x, width = 30))
+
+quad_leg_plot
+
+# Extract the legend. Returns a gtable
+quad_leg <- get_legend(quad_leg_plot)
+
+# Convert to a ggplot and print
+quad_leg2 <- as_ggplot(quad_leg)
+quad_leg2
+
+
+ggsave(quad_leg2,filename = "./visualizations/quad_figure_legend.png",
+       device = "png", height = 2, width = 4, units = "in")
+
 
 ##### archived code
 
@@ -393,7 +503,7 @@ p <- ggplot(data = plot_data)+
   scale_fill_manual(values = my_col)+
   geom_vline(xintercept = 0)+
   labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-  ggtitle(expression(paste("Marginal effect of N deposition increase (per kg N ", ha^-1," ",y^-1,")")))
+  ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))
 
 ggsave(p,filename = "./visualizations/final_figures/Figure4_test.png",
        device = "png", height = 6.5, width = 7.5, units = "in")

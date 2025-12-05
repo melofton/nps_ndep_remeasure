@@ -240,7 +240,7 @@ facet_label_df <- final_pred_df %>%
          er2 = str_replace_all(er2, " ", "~"),
          er1 = str_remove(er1, "~$"),
          er2 = str_remove(er2, "^~"),
-         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~N~ind^-1~yr^-1))")) %>%
+         facet_labels = paste0("atop(italic(",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~C~y^-1~ind^-1))")) %>%
   select(species, ecoregion, facet_labels)
 
 plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%

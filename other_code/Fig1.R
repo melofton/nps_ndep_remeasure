@@ -16,6 +16,7 @@ library(viridis)
 library(ggthemes)
 library(ggpubr)
 library(rnaturalearth)
+library(scales)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
   dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
@@ -122,3 +123,74 @@ p1 <- ggarrange(fig1_a,
 p1
 ggsave(plot = p1, filename = "./visualizations/final_figures/Figure1.tif",
        device = "tiff", height = 7, width = 10, units = "in", bg = "white")
+
+#### plots for CLAD
+
+# Generate the default discrete color palette for 3 colors
+default_colors <- hue_pal()(3)
+
+# Extract the first two colors
+first_two_colors <- default_colors[1:2]
+
+# Print the colors
+print(first_two_colors)
+
+# Create the plot
+clad_map0 <- ggplot() +
+  # Add the ecoregions layer, using the ecoregion name for the fill color
+  geom_sf(data = us_ecoregions_sf, aes(fill = NA_L1NAME), color = "black", linewidth = 0.3) +
+  #geom_sf(data = plotting_points, aes(fill = level1_ecoregion), color = "black", shape = 21) +
+  # Remove the gridlines and axis text for a cleaner map
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  ) +
+  theme(legend.position = "none")+
+  scale_fill_manual(values = c(first_two_colors[1],"white","white","white",
+                               "white","white",
+                               "white","white","white","white"))
+clad_map0
+ggsave(plot = clad_map0, filename = "./visualizations/clad_map0.tif",
+       device = "tiff", height = 4, width = 6, units = "in", bg = "white")
+
+# Create the plot
+clad_map <- ggplot() +
+  # Add the ecoregions layer, using the ecoregion name for the fill color
+  geom_sf(data = us_ecoregions_sf, aes(fill = NA_L1NAME), color = "black", linewidth = 0.3) +
+  #geom_sf(data = plotting_points, aes(fill = level1_ecoregion), color = "black", shape = 21) +
+  # Remove the gridlines and axis text for a cleaner map
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  ) +
+  theme(legend.position = "none")+
+  scale_fill_manual(values = c(first_two_colors[1],"white","white","white",
+                                "white",first_two_colors[2],
+                                "white","white","white","white"))
+clad_map
+ggsave(plot = clad_map, filename = "./visualizations/clad_map.tif",
+       device = "tiff", height = 4, width = 6, units = "in", bg = "white")
+
+# Create the plot
+clad_map_nf <- ggplot() +
+  # Add the ecoregions layer, using the ecoregion name for the fill color
+  geom_sf(data = us_ecoregions_sf, aes(fill = NA_L1NAME), color = "black", linewidth = 0.3) +
+  #geom_sf(data = plotting_points, aes(fill = level1_ecoregion), color = "black", shape = 21) +
+  # Remove the gridlines and axis text for a cleaner map
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  ) +
+  theme(legend.position = "none")+
+  scale_fill_manual(values = c("white","white","white","white",
+                               "white","gray",
+                               "white","white","white","white"))
+clad_map_nf
+ggsave(plot = clad_map_nf, filename = "./visualizations/clad_map_nf.tif",
+       device = "tiff", height = 4, width = 6, units = "in", bg = "white")
