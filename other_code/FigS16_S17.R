@@ -12,6 +12,7 @@ library(lubridate)
 library(arrow)
 library(ggpubr)
 library(ggthemes)
+library(ggpmisc)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv" 
 model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
@@ -205,16 +206,25 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
   
   p1 <- ggarrange(r2, rmse, ncol = 2)
   
-  p2 <- ggplot(data = df3)+
-    geom_point(aes(x = AG_carbon_pYear, y = pred))+
+  eq_placement <- df3 %>%
+    group_by(species) %>%
+    summarize(min_x = min(AG_carbon_pYear, na.rm = TRUE),
+           max_x = max(AG_carbon_pYear, na.rm = TRUE),
+           min_y = min(pred, na.rm = TRUE),
+           max_y = max(pred, na.rm = TRUE))
+  
+  p2 <- ggplot(data = df3, aes(x = AG_carbon_pYear, y = pred))+
+    geom_point()+
     geom_abline(slope = 1)+
-    geom_smooth(method = "lm", formula = y ~ x, se = FALSE)+
-    stat_regline_equation(label.x = "right", label.y = "top")+ # Adds equation
-    stat_cor(method = "pearson", label.x = "left", label.y = "top")+ # Adds R and P-value
     theme_bw()+
     theme(legend.position = "none")+
     #ggtitle("Displaying repeated measures")+
     facet_wrap(facets = vars(species), scales = "free")+
+    geom_smooth(method = "lm", formula = y ~ x, se = FALSE)+
+    stat_poly_eq(use_label(c("eq")), formula = y~x,label.y = 0.95)+
+    stat_poly_eq(use_label(c("R2")), formula = y~x, label.y = 0.85)+
+    #stat_regline_equation(aes(x = AG_carbon_pYear, y = pred), label.x.npc = 0, label.y.npc = 1)+ # Adds equation
+    #stat_cor(aes(x = AG_carbon_pYear, y = pred), method = "pearson", label.x.npc = 0.1, label.y.npc = 0)+ # Adds R and P-value
     xlab(expression(paste("observed tree growth (kg C ", y^-1," ",ind^-1,")")))+
     ylab(expression(paste("predicted tree growth (kg C ", y^-1," ",ind^-1,")")))
   
