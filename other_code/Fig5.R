@@ -5,17 +5,32 @@
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
 
+# load packages
+library(tidyverse)
+library(lubridate)
+library(arrow)
+library(ggpubr)
+library(ggthemes)
+library(stringr)
 library(scales)
+library(metR)
+library(grid)
+library(alphahull)
 
+# needed for creating factorial combinations of S and N dep and for orthogonalization
+mem.maxVSize(vsize = Inf)
+
+# needed to convert ashapes into standard polygons so can get grid points
+source("./other_code/hull2poly.R")
+
+# read in raw data
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
-marginal_effect_Ndep_antecedent_recent <- function(data){
-  
-# list files in each model output folder
+# list files in model output folder
 out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
-# read in and combine files
+# read in and combine model output files to get posterior distributions of parameters
 for(i in 1:length(out)){
   
   spp_id = str_split(out[i], pattern = "-")[[1]][2]
@@ -32,16 +47,20 @@ for(i in 1:length(out)){
   
 }
 
+# a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) 
 
+# read in pre-processed data (used in models)
 df <- read_csv("./data/processed_data.csv")
 
+# read in key of common and scientific names so can use both throughout the script
 spp_df <- read_csv(data) %>%
   select(common_name, species) %>%
   distinct(.)
 
+# get mean values needed for model predictions (e.g., mean tree size by ecoregion)
 df1 <- left_join(df, spp_df, by = "common_name") %>%
   group_by(species, common_name, ecoregion_ortho) %>%
   summarize(log_mean_size = log(mean(AG_carbon_m1, na.rm = TRUE)),
@@ -50,191 +69,213 @@ df1 <- left_join(df, spp_df, by = "common_name") %>%
             mean_Dep_Shistoric = mean(Dep_Shistoric, na.rm = TRUE),
             c = mean(c, na.rm = TRUE),
             mean_size = mean(AG_carbon_m1, na.rm = TRUE),
-            n_trees_ecoregion = n_distinct(tree_ID)) %>%
+            n_trees_ecoregion = n_distinct(tree_ID),
+            mean_growth = round(mean(AG_carbon_pYear, na.rm = TRUE), 2),
+            mean_perc_growth = round(mean_growth / mean_size * 100, 2)) %>%
   mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
   ungroup()
 
-# get model predictions for recent N dep changes
+##### Get model predictions at various levels of recent and antecedent N dep ##################
 
-common_names <- unique(df1$common_name)
+# vector of ecoregions for for-loop
+ecoregions <- unique(df1$ecoregion_ortho)
 
-final_pred_shortterm <- NULL
+# placeholders to hold model prediction output
+final_pred_df <- NULL
+N_ranges <- NULL
 
-for(i in 1:length(common_names)){
+# vector of alpha values for creating ahulls for each ecoregion
+# these were found through trial and error by running the following:
+# N_ahull <- ahull(x = Nrange_dat$Dep_Nhistoric_SO, 
+#                  y = Nrange_dat$Dep_Ndiff_SO,
+#                  alpha = 3)
+# plot(N_ahull, wpoints = TRUE, col = "blue", do.shape = TRUE)
+alpha_vals <- c(7, 3, 12, 2, 5, 10, 3)
+
+# for-loop; first loop through ecoregions, then species
+for(i in 1:length(ecoregions)){
   
-  model_data <- df1 %>% filter(common_name == common_names[i])
-  model_output <- final1 %>% filter(spp_id == common_names[i],
-                                    model_id == "ortho_log_t_interaction_adj_priors")
-  params <- model_output[sample(nrow(model_output), 1000), ]
+  # where are we
+  print(ecoregions[i])
   
-  for(j in 1:length(model_data$ecoregion_ortho)){
+  # data from which we will retrieve ranges of N deposition for figure
+  Nrange_dat <- df %>%
+    mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
+    filter(ecoregion_ortho == ecoregions[i]) %>%
+    select(plot_ID, ecoregion_ortho, Dep_Nhistoric_SO, Dep_Ndiff_SO) %>%
+    distinct(.)
+  
+  # get alpha convex hull
+  eco_ashape <- ashape(x = Nrange_dat$Dep_Nhistoric_SO, 
+                             y = Nrange_dat$Dep_Ndiff_SO,
+                             alpha = alpha_vals[i])
+  
+  # convert to regular polygon
+  eco_poly <- hull2poly(eco_ashape)
+  
+  # get grid polygons
+  grid_polygons <- st_make_grid(eco_poly, 
+                                cellsize = c(0.1, 0.1), # Define the size of grid cells
+                                what = "polygons") |> 
+    st_sf() # Convert to an sf object
+  
+  # filter grid cells that intersect with the ashape polygon
+  grid_within_ahull <- st_intersection(grid_polygons, eco_poly)
+  
+  # convert the resulting grid polygons to centroids
+  grid_points <- st_centroid(grid_within_ahull)
+  
+  # convert to dataframe
+  N_grid <- data.frame(st_coordinates(grid_points)) %>%
+    rename(Dep_Nhistoric_SO = X,
+           Dep_Ndiff_SO = Y) %>%
+    add_row(Dep_Nhistoric_SO = c(0,0,-1),
+            Dep_Ndiff_SO = c(0,-1,0)) 
+  
+  # map from SO to DO
+  rtilde_n = N_grid$Dep_Ndiff_SO
+  atilde_n = N_grid$Dep_Nhistoric_SO
+  
+  n_n = length(rtilde_n)
+  
+  P_n = diag(n_n) - (rtilde_n %*% solve(t(rtilde_n) %*% rtilde_n, t(rtilde_n)))
+  
+  astar_n = as.numeric(P_n %*% atilde_n)
+  
+  N_grid$Dep_Nhistoric_DO_scaled = scale(astar_n)
+  N_grid$Dep_Ndiff_DO_scaled = scale(rtilde_n)
+  
+  st_N_DO_values <- N_grid %>%
+    filter(Dep_Ndiff_SO %in% c(0,-1) & Dep_Nhistoric_SO == 0)
+  lt_N_DO_values <- N_grid %>%
+    filter(Dep_Ndiff_SO == 0 & Dep_Nhistoric_SO %in% c(0,-1))
+  
+  # get names of species in that ecoregion
+  common_names = df %>%
+    filter(ecoregion_ortho == ecoregions[i]) %>% 
+    select(common_name) %>%
+    distinct(.) %>%
+    mutate(common_name = ifelse(common_name == "yellow-poplar","yellow poplar",common_name)) %>%
+    pull(common_name) 
+  
+  # loop through species in each ecoregion
+  for(j in 1:length(common_names)){
     
-    p5_og <- params$p5 - model_data$c[j] * params$p9
+    # where are we
+    print(common_names[j])
     
-    pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
-                          + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-    m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
-    pred_baseline = m2_baseline - model_data$mean_size[j]
+    # get mean values from pre-processed data (e.g., mean tree size per ecoregion) for that species
+    model_data <- df1 %>% filter(common_name == common_names[j] & ecoregion_ortho == ecoregions[i])
     
-    pred_increase_log <- ((params$global_tree_effect + 1*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*1*params$p11 + 1*1*params$p12) 
-                          + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-    m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
-    pred_increase = m2_increase - model_data$mean_size[j]
+    # get values of model parameters for that species
+    model_output <- final1 %>% filter(spp_id == common_names[j],
+                                      model_id == "ortho_log_t_interaction_adj_priors")
+    params <- model_output[sample(nrow(model_output), 1000), ]
     
-    growth_delta <- pred_increase - pred_baseline
+    # back transformation of model parameters to SO space
+    # p5 is coefficient on recent N dep; p12 is coefficient on recent N dep quadratic term
+    # this is not needed if we work in DO space
+    # p5_so <- params$p5 - model_data$c * params$p9
+    # p12_so <- params$p12 - model_data$c * params$p11
+  
+    # get model predictions!
     
-    pred <- data.frame(species = model_data$species[1],
-                       model_id = model_output$model_id[1],
-                       ecoregion = model_data$ecoregion_ortho[j],
-                       pred = growth_delta)
+    # short-term
+    pred_log_baseline_st <- ((params$global_tree_effect + st_N_DO_values$Dep_Ndiff_DO_scaled[1]*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8 + st_N_DO_values$Dep_Nhistoric_DO_scaled[1]*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + st_N_DO_values$Dep_Nhistoric_DO_scaled[1]*st_N_DO_values$Dep_Ndiff_DO_scaled[1]*params$p11 + st_N_DO_values$Dep_Ndiff_DO_scaled[1]*st_N_DO_values$Dep_Ndiff_DO_scaled[1]*params$p12) 
+                        + params$p2*model_data$log_mean_size) - params$p3*log(1)
+    m2_baseline_st = exp(pred_log_baseline_st + model_data$log_mean_size)
+    pred_baseline_st = m2_baseline_st - model_data$mean_size
     
+    pred_baseline <- round(mean(pred_baseline_st),2)
+    
+    pred_log_increase_st <- ((params$global_tree_effect + st_N_DO_values$Dep_Ndiff_DO_scaled[2]*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8 + st_N_DO_values$Dep_Nhistoric_DO_scaled[2]*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + st_N_DO_values$Dep_Nhistoric_DO_scaled[2]*st_N_DO_values$Dep_Ndiff_DO_scaled[2]*params$p11 + st_N_DO_values$Dep_Ndiff_DO_scaled[2]*st_N_DO_values$Dep_Ndiff_DO_scaled[2]*params$p12) 
+                             + params$p2*model_data$log_mean_size) - params$p3*log(1)
+    m2_increase_st = exp(pred_log_increase_st + model_data$log_mean_size)
+    pred_increase_st = m2_increase_st - model_data$mean_size
+    
+    growth_delta_st <- pred_increase_st - pred_baseline_st
+    
+    # long-term
+    pred_log_baseline_lt <- ((params$global_tree_effect + lt_N_DO_values$Dep_Ndiff_DO_scaled[1]*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8 + lt_N_DO_values$Dep_Nhistoric_DO_scaled[1]*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + lt_N_DO_values$Dep_Nhistoric_DO_scaled[1]*lt_N_DO_values$Dep_Ndiff_DO_scaled[1]*params$p11 + lt_N_DO_values$Dep_Ndiff_DO_scaled[1]*lt_N_DO_values$Dep_Ndiff_DO_scaled[1]*params$p12) 
+                             + params$p2*model_data$log_mean_size) - params$p3*log(1)
+    m2_baseline_lt = exp(pred_log_baseline_lt + model_data$log_mean_size)
+    pred_baseline_lt = m2_baseline_lt - model_data$mean_size
+    
+    pred_log_increase_lt <- ((params$global_tree_effect + lt_N_DO_values$Dep_Ndiff_DO_scaled[2]*params$p5 + 0*params$p6 + 0*params$p7 + 0*params$p8 + lt_N_DO_values$Dep_Nhistoric_DO_scaled[2]*params$p9 + model_data$mean_Dep_Shistoric*params$p10 + lt_N_DO_values$Dep_Nhistoric_DO_scaled[2]*lt_N_DO_values$Dep_Ndiff_DO_scaled[2]*params$p11 + lt_N_DO_values$Dep_Ndiff_DO_scaled[2]*lt_N_DO_values$Dep_Ndiff_DO_scaled[2]*params$p12) 
+                             + params$p2*model_data$log_mean_size) - params$p3*log(1)
+    m2_increase_lt = exp(pred_log_increase_lt + model_data$log_mean_size)
+    pred_increase_lt = m2_increase_lt - model_data$mean_size
+    
+    growth_delta_lt <- pred_increase_lt - pred_baseline_lt
+    
+    pred <- c(growth_delta_st, growth_delta_lt)
+    
+    # assemble final df for this species-ecoregion combination
+    pred_df <- data.frame(species = model_data$species[1],
+                          model_id = params$model_id[1],
+                          ecoregion = model_data$ecoregion_ortho[1],
+                          pred = pred,
+                          pred_baseline = pred_baseline,
+                          change_type = rep(c("short-term","antecedent"),each = 1000)
+                          )
+  
     if(i == 1 & j == 1){
-      final_pred_shortterm <- pred
+      final_pred_df <- pred_df
     } else {
-      final_pred_shortterm <- bind_rows(final_pred_shortterm, pred)
+      final_pred_df <- bind_rows(final_pred_df, pred_df)
     }
-    
+  
   }
   
 }
 
-# get model predictions for antecedent Ndep changes 
-final_pred_longterm <- NULL
+# get predictions for all ecoregions with > 100 trees
+fig5_eco <- df1 %>%
+  filter(n_trees_ecoregion > 100) %>%
+  rename(ecoregion = ecoregion_ortho) %>%
+  select(species, ecoregion, n_trees_ecoregion)
 
-for(i in 1:length(common_names)){
-  
-  model_data <- df1 %>% filter(common_name == common_names[i])
-  model_output <- final1 %>% filter(spp_id == common_names[i],
-                                    model_id == "ortho_log_t_interaction_adj_priors")
-  params <- model_output[sample(nrow(model_output), 1000), ]
-  
-  for(j in 1:length(model_data$ecoregion_ortho)){
-    
-    p5_og <- params$p5 - model_data$c[j] * params$p9
-    
-    pred_baseline_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + model_data$mean_Dep_Nhistoric[j]*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + model_data$mean_Dep_Nhistoric[j]*0*params$p11 + 0*0*params$p12) 
-                          + params$p2*model_data$log_mean_size[j]) - params$p3*log(1) 
-    m2_baseline = exp(pred_baseline_log + model_data$log_mean_size[j])
-    pred_baseline = m2_baseline - model_data$mean_size[j]
-    
-    pred_increase_log <- ((params$global_tree_effect + 0*p5_og + 0*params$p6 + 0*params$p7 + 0*params$p8 + (model_data$mean_Dep_Nhistoric[j]+1)*params$p9 + model_data$mean_Dep_Shistoric[j]*params$p10 + (model_data$mean_Dep_Nhistoric[j]+1)*0*params$p11 + 0*0*params$p12) 
-                          + params$p2*model_data$log_mean_size[j]) - params$p3*log(1)
-    m2_increase = exp(pred_increase_log + model_data$log_mean_size[j])
-    pred_increase = m2_increase - model_data$mean_size[j]
-    
-    growth_delta <- pred_increase - pred_baseline
-    
-    pred <- data.frame(species = model_data$species[1],
-                       model_id = model_output$model_id[1],
-                       ecoregion = model_data$ecoregion_ortho[j],
-                       pred = growth_delta)
-    
-    if(i == 1 & j == 1){
-      final_pred_longterm <- pred
-    } else {
-      final_pred_longterm <- bind_rows(final_pred_longterm, pred)
-    }
-    
-  }
-  
-}
+letters_df <- final_pred_df %>%
+  select(species, ecoregion) %>%
+  distinct(.) %>%
+  right_join(., fig5_eco) %>%
+  arrange(species, ecoregion) %>%
+  mutate(letters = paste0(letters[seq_len(nrow(fig5_eco))],"."))
 
-# get weighted average of predictions
-df2 <- df1 %>%
-  group_by(species, common_name) %>%
-  summarize(n_trees_total = sum(n_trees_ecoregion))
+facet_label_df <- final_pred_df %>%
+  select(species, ecoregion, pred_baseline) %>%
+  distinct(.) %>%
+  right_join(., letters_df, by = c("species","ecoregion")) %>%
+  mutate(pred_baseline = round(pred_baseline, 2)) %>%
+  separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
+  separate_wider_delim(ecoregion, delim = "&", names = c("er1","er2"), too_few = "align_start",cols_remove = FALSE) %>%
+  mutate(er1 = str_replace_all(er1, " ", "~"),
+         er2 = str_replace_all(er2, " ", "~"),
+         er1 = str_remove(er1, "~$"),
+         er2 = str_remove(er2, "^~"),
+         facet_labels = paste0("atop(italic(",letters,"~",genus,"~",spp,"), atop(atop(",er1, ",",er2,"),expected~growth:~",pred_baseline,"~kg~C~y^-1~ind^-1))")) %>%
+  select(species, ecoregion, facet_labels)
 
-spp <- unique(df1$species)
+plot_data <- right_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%
+  arrange(species)
 
-for(i in 1:length(spp)){
-  
-  n_trees_total <- df2 %>%
-    filter(species == spp[i]) %>%
-    pull(n_trees_total)
-  
-  n_trees_ecoregion <- df1 %>%
-    filter(species == spp[i]) %>%
-    select(ecoregion_ortho, n_trees_ecoregion)
-  
-  tree_ecos <- unique(n_trees_ecoregion$ecoregion_ortho)
-  
-  for(j in 1:length(n_trees_ecoregion$ecoregion_ortho)){
-    
-    species_pred_shortterm_eco <- final_pred_shortterm %>%
-      filter(species == spp[i] & ecoregion == tree_ecos[j]) %>%
-      pull(pred)
-    
-    species_pred_longterm_eco <- final_pred_longterm %>%
-      filter(species == spp[i] & ecoregion == tree_ecos[j]) %>%
-      pull(pred)
-    
-    n_trees_this_eco <- n_trees_ecoregion %>%
-      filter(ecoregion_ortho == tree_ecos[j]) %>%
-      pull(n_trees_ecoregion)
-    
-    adj_shortterm_pred <- species_pred_shortterm_eco*n_trees_this_eco / n_trees_total
-    adj_longterm_pred <- species_pred_longterm_eco*n_trees_this_eco / n_trees_total
-    
-    if(j == 1){
-      pred_shortterm <- adj_shortterm_pred
-      pred_longterm <- adj_longterm_pred
-    } else {
-      pred_shortterm <- pred_shortterm + adj_shortterm_pred
-      pred_longterm <- pred_longterm + adj_longterm_pred
-    }
-    
-  }
-  
-  pred <- c(pred_shortterm, pred_longterm)
-  
-  final_pred_species <- data.frame(species = spp[i],
-                                   change_type = rep(c("short-term","antecedent"),each = 1000),
-                                   pred = pred,
-                                   draw = rep(c(1:1000),times = 2))
-  
-  if(i == 1){
-    final_pred <- final_pred_species
-  } else {
-    final_pred <- bind_rows(final_pred, final_pred_species)
-  }
-  
-  
-  
-}
-
-## figure
-
-plot_pred <- final_pred %>%
-  pivot_wider(names_from = change_type, values_from = pred) %>%
-  rename(shortterm = `short-term`)
-
-cb_palette <- colorblind_pal()(8)
-
-  p <- ggplot(data = plot_pred)+
-    geom_hline(yintercept = 0)+
-    geom_vline(xintercept = 0)+
-    geom_point(aes(x = antecedent, y = shortterm, col = species), size = 0.1, alpha = 0.1)+
-    stat_ellipse(aes(x = antecedent, y = shortterm, col = species), level = 0.95, alpha = 0.5)+
-    theme_bw()+
-    xlim(-1.5,1.5)+
-    ylim(-1.5,1.5)+
-    scale_color_manual(values = c("Acer saccharum" = cb_palette[1],
-                                  "Betula papyrifera" = cb_palette[2],
-                                  "Liriodendron tulipifera" = cb_palette[3],
-                                  "Picea rubens" = cb_palette[4],
-                                  "Pinus ponderosa" = cb_palette[5],
-                                  "Populus deltoides" = cb_palette[6],
-                                  "Populus tremuloides" = cb_palette[7],
-                                  "Prunus serotina" = cb_palette[8]))+ # Adjust width as needed
-    ylab("Growth change given 1 kg ha^-1 yr^-1 N 'short-term' increase")+
-    xlab("Growth change given 1 kg ha^-1 yr^-1 N 'long-term' increase")+
-    labs(color = "Species")
-  
-  ggsave(p,filename = "./visualizations/final_figures/Figure5_inset.png",
-         device = "png")
-  
-  
+my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
 
 
-}
+p <- ggplot(data = plot_data)+
+  geom_density(aes(x = pred, group = change_type, 
+                   color = change_type, fill = change_type),
+               alpha = 0.5)+
+  facet_wrap(~facet_labels, scales = "free", labeller = label_parsed,
+             nrow = 7, ncol = 4)+
+  theme_bw()+
+  scale_color_manual(values = my_col)+
+  scale_fill_manual(values = my_col)+
+  geom_vline(xintercept = 0)+
+  labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
+  ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
+  theme(strip.text = element_text(size = 12))
+
+ggsave(p,filename = "./visualizations/final_figures/Figure5.png",
+       device = "png", height = 15, width = 13, units = "in")
 
