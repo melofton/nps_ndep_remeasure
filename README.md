@@ -1,11 +1,11 @@
 # DRAFT Code repository for Lofton et al. 2026, "INSERT SUBMITTED MANUSCRIPT TITLE HERE"
-Mary E. Lofton^1^, Michael Schwob^2^, Michael Bell^3^, Christopher Clark^4^, Emmi Felker-Quinn^3^, Todd McDonnell^5^, R. Quinn Thomas^1^ 
+Mary E. Lofton<sup>1<sup>, Michael Schwob<sup>2<sup>, Michael Bell<sup>3<sup>, Christopher Clark<sup>4<sup>, Emmi Felker-Quinn<sup>3<sup>, Todd McDonnell<sup>5<sup>, R. Quinn Thomas<sup>1<sup> 
 
-*^1^Center for Ecosystem Forecasting, Virginia Tech, Blacksburg, VA, USA*<br>
-*^2^Department of Statistics, Virginia Tech, Blacksburg, VA, USA*<br>
-*^3^US National Park Service Air Resources Division, Denver, CO, USA*<br> 
-*^4^US Environmental Protection Agency Office of Research and Development, Washington DC, USA*<br>
-*^5^E&S Environmental, Corvallis, OR, USA* 
+*<sup>1<sup>Center for Ecosystem Forecasting, Virginia Tech, Blacksburg, VA, USA*<br>
+*<sup>2<sup>Department of Statistics, Virginia Tech, Blacksburg, VA, USA*<br>
+*<sup>3<sup>US National Park Service Air Resources Division, Denver, CO, USA*<br> 
+*<sup>4<sup>US Environmental Protection Agency Office of Research and Development, Washington DC, USA*<br>
+*<sup>5<sup>E&S Environmental, Corvallis, OR, USA* 
 
 ### Accessing data associated with this repository:
 This section will be developed once we discuss a data publication plan with co-authors.
