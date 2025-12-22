@@ -1,9 +1,16 @@
 # Correlation between antecedent and short-term change in N dep
 # Author: Mary Lofton
 # Date: 04NOV25
+# Last updated: 22DEC25
 
+# Load packages
+library(tidyverse)
+library(lubridate)
+
+# Read in data
 dat <- read_csv("./data/processed_data.csv") 
 
+# Data wrangling
 mod_dat <- dat %>%
   select(Dep_Nhistoric, Dep_Ndiff) %>%
   distinct(.)
@@ -32,6 +39,7 @@ fitted3 <- data.frame(Dep_Sdiff = mod_dat3$Dep_Sdiff, fitted = mod3$fitted.value
 pcor3 <- round(cor(mod_dat3$Dep_Ndiff, mod_dat3$Dep_Sdiff),2)
 
 
+# Plotting
 p <- ggplot()+
   geom_point(data = mod_dat, aes(x = Dep_Nhistoric, y = Dep_Ndiff),alpha = 0.3)+
   #geom_line(data = fitted, aes(x = Dep_Nhistoric, y = fitted), color = "blue")+

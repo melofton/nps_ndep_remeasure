@@ -1,6 +1,7 @@
 # Model predictions vs observations
 # Author: Mary Lofton
 # Date: 03MAR25
+# Last updated: 22DEC25
 
 # Purpose: calculate model predictions using JAGS model output and compare to observations
 
@@ -12,7 +13,6 @@ library(lubridate)
 library(arrow)
 library(ggpubr)
 library(ggthemes)
-library(ggpmisc)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv" 
 model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
@@ -242,5 +242,4 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
          device = "tiff", height = 5, width = 6.6, units = "in",bg = "white")
   ggsave(plot = p2, filename = "./visualizations/final_figures/FigureS16.tif",
          device = "tiff", height = 8, width = 8, units = "in",bg = "white")
-  ggsave(plot = p3, filename = "./visualizations/final_figures/Figure3_supp2_log.tif",
-         device = "tiff", height = 8, width = 8, units = "in",bg = "white")
+  

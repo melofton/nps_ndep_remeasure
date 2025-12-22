@@ -1,6 +1,7 @@
 # Marginal effect of N deposition on growth
 # Author: Mary Lofton
 # Date: 03APR25
+# Last updated: 22DEC25
 
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
@@ -317,7 +318,11 @@ mean_pred_responses <- final_pred_df %>%
   arrange(change_type, perc_change) %>%
   right_join(., fig4_ecos)
 
-##### code for quadrant figure
+#### END OF CODE FOR FINAL FIGURE INCLUDED IN MANUSCRIPT
+
+
+##### code for quadrant figure for CLAD presentation
+
 plot_data2 <- plot_data %>%
   group_by(species, change_type, ecoregion) %>%
   summarize(pred = mean(pred, na.rm = TRUE)) %>%
@@ -425,103 +430,3 @@ quad_leg2
 
 ggsave(quad_leg2,filename = "./visualizations/quad_figure_legend.png",
        device = "png", height = 2, width = 4, units = "in")
-
-
-##### archived code
-
-# get weighted average of predictions
-df2 <- df1 %>%
-  group_by(species, common_name) %>%
-  summarize(n_trees_total = sum(n_trees_ecoregion))
-
-spp <- unique(df1$species)
-
-for(i in 1:length(spp)){
-  
-  n_trees_total <- df2 %>%
-    filter(species == spp[i]) %>%
-    pull(n_trees_total)
-  
-  n_trees_ecoregion <- df1 %>%
-    filter(species == spp[i]) %>%
-    select(ecoregion_ortho, n_trees_ecoregion)
-  
-  tree_ecos <- unique(n_trees_ecoregion$ecoregion_ortho)
-  
-  for(j in 1:length(tree_ecos)){
-    
-    species_pred_eco <- final_pred_df %>%
-      filter(species == spp[i] & ecoregion == tree_ecos[j]) %>%
-      pull(pred)
-    
-    n_trees_this_eco <- n_trees_ecoregion %>%
-      filter(ecoregion_ortho == tree_ecos[j]) %>%
-      pull(n_trees_ecoregion)
-    
-    adj_pred <- species_pred_eco*n_trees_this_eco / n_trees_total
-    
-    if(j == 1){
-      pred <- adj_pred
-    } else {
-      pred <- pred + adj_pred
-    }
-    
-  }
-  
-  final_pred_species <- data.frame(species = spp[i],
-                                   change_type = rep(c("short-term","antecedent"),each = 1000),
-                                   pred = pred)
-  
-  if(i == 1){
-    final_pred <- final_pred_species
-  } else {
-    final_pred <- bind_rows(final_pred, final_pred_species)
-  }
-  
-  
-  
-}
-
-my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
-
-mean_growth <- left_join(df, spp_df, by = "common_name") %>%
-  group_by(species, common_name) %>%
-  summarize(mean_growth = mean(AG_carbon_pYear, na.rm = TRUE)) %>%
-  select(species, mean_growth) %>%
-  ungroup() %>%
-  arrange(species) %>%
-  mutate(labels = paste0(letters[seq_len(length(unique(species)))],".")) %>%
-  separate_wider_delim(species, delim = " ", names = c("genus","spp"), cols_remove = FALSE) %>%
-  mutate(facet_labels = paste0("atop(italic(",labels,"~",genus,"~",spp,"), mean~growth~rate:",round(mean_growth,1),")"))
-
-plot_data <- left_join(final_pred, mean_growth, by = "species") 
-
-
-p <- ggplot(data = plot_data)+
-  geom_density(aes(x = pred, group = change_type, 
-                   color = change_type, fill = change_type),
-               alpha = 0.5)+
-  facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
-  theme_bw()+
-  scale_color_manual(values = my_col)+
-  scale_fill_manual(values = my_col)+
-  geom_vline(xintercept = 0)+
-  labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
-  ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))
-
-ggsave(p,filename = "./visualizations/final_figures/Figure4_test.png",
-       device = "png", height = 6.5, width = 7.5, units = "in")
-
-mean_pred_responses <- final_pred %>%
-  group_by(species, change_type) %>%
-  summarize(mean_pred = mean(pred, na.rm = TRUE)) %>%
-  left_join(., mean_growth, by = "species") %>%
-  select(species, change_type, mean_pred, mean_growth) %>%
-  mutate(perc_change = mean_pred / mean_growth * 100) %>%
-  arrange(change_type, perc_change) %>%
-  mutate(change_group = ifelse(species %in% c("Acer saccharum", "Betula papyrifera", "Picea rubens"), 1,
-                               ifelse(species %in% c("Liriodendron tulipifera", "Populus tremuloides", "Prunus serotina"), 2,
-                                      ifelse(species == "Pinus pondersa", 3, 4))))
-
-
-

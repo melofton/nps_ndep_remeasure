@@ -1,6 +1,7 @@
 # McDonnell data figure
 # Author: Mary Lofton
 # Date: 17OCT25
+# Last updated: 22DEC25
 
 # Purpose: supplemental data figure to show the number of trees of each species per plot
 

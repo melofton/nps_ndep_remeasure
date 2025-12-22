@@ -1,6 +1,7 @@
 # McDonnell data figure
 # Author: Mary Lofton
 # Date: 20OCT25
+# Last updated: 22DEC25
 
 # Purpose: data figure to illustrate:
 

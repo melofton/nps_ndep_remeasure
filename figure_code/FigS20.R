@@ -1,6 +1,7 @@
 # Marginal effect of N deposition on growth
 # Author: Mary Lofton
 # Date: 03APR25
+# Last updated: 22DEC25
 
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)

@@ -1,6 +1,7 @@
 # McDonnell data figure
 # Author: Mary Lofton
 # Date: 20OCT25
+# Last updated: 22DEC25
 
 # Purpose: data figure to illustrate:
 
@@ -170,6 +171,9 @@ p2 <- ggarrange(fig2_a, fig2_b,
 p2
 ggsave(plot = p2, filename = "./visualizations/final_figures/Figure2.tif",
        device = "tiff", height = 8, width = 7.5, units = "in", bg = "white")
+
+#### END OF CODE FOR FINAL FIGURE INCLUDED IN MANUSCRIPT
+
 
 # Additional figure versions for CLAD presentation
 

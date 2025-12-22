@@ -1,6 +1,7 @@
 # McDonnell data figure
 # Author: Mary Lofton
 # Date: 17OCT25
+# Last updated: 22DEC25
 
 # Purpose: data figure to illustrate:
 
@@ -38,11 +39,6 @@ na_ecoregions <- st_read(shapefile_path)
 us_ecoregions <- na_ecoregions %>%
   filter(grepl("United States", NA_L1NAME) ) # A quick filter, adjust as needed
 
-# You can examine the ecoregion names to decide how to filter
-# unique(na_ecoregions$NA_L1NAME) 
-
-# For a more robust filtering, you might consider merging with state boundaries.
-# Here's an example to isolate US ecoregion parts more directly:
 us_boundaries <- ne_states(country = "United States of America", returnclass = "sf") %>%
   filter(!iso_3166_2 == "US-AK")
 crs_us <- st_crs(us_boundaries)
@@ -124,7 +120,10 @@ p1
 ggsave(plot = p1, filename = "./visualizations/final_figures/Figure1.tif",
        device = "tiff", height = 7, width = 10, units = "in", bg = "white")
 
-#### plots for CLAD
+#### END OF CODE FOR FINAL FIGURE INCLUDED IN MANUSCRIPT
+
+
+#### additional plots for CLAD presentation
 
 # Generate the default discrete color palette for 3 colors
 default_colors <- hue_pal()(3)

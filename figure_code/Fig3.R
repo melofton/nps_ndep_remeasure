@@ -1,6 +1,7 @@
 # Marginal effect of N deposition on growth
 # Author: Mary Lofton
 # Date: 03APR25
+# Date last updated: 22DEC25
 
 # Purpose: figure with marginal effect of N deposition (decrease of 1 kg
 # per hectare per year) on growth (kg C per year per individual)
@@ -216,7 +217,7 @@ for(i in 1:length(ecoregions)){
   
 }
 
-###### different attempt at figure
+###### create figure
 
 letters_df <- data.frame(species = sort(unique(final_pred_df$species)),
                          letters = paste0(letters[seq_len(length(unique(final_pred_df$species)))],"."))
