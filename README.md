@@ -1,77 +1,46 @@
-# nps_ndep_remeasure
+# DRAFT Code repository for Lofton et al. 2026, "INSERT SUBMITTED MANUSCRIPT TITLE HERE"
+Mary E. Lofton^1^, Michael Schwob^2^, Michael Bell^3^, Christopher Clark^4^, Emmi Felker-Quinn^3^, Todd McDonnell^5^, R. Quinn Thomas^1^ 
 
-## Guide to folders:
+*^1^Center for Ecosystem Forecasting, Virginia Tech, Blacksburg, VA, USA*<br>
+*^2^Department of Statistics, Virginia Tech, Blacksburg, VA, USA*<br>
+*^3^US National Park Service Air Resources Division, Denver, CO, USA*<br> 
+*^4^US Environmental Protection Agency Office of Research and Development, Washington DC, USA*<br>
+*^5^E&S Environmental, Corvallis, OR, USA* 
+
+### Accessing data associated with this repository:
+This section will be developed once we discuss a data publication plan with co-authors.
+
+### Guide to files and folders:
 
 **data**: contains all data used for project
 
 **experiments**: contains results from modeling experiments, including model txt files, model output as parquet files, and default model output visualizations
 
+**figure_code**: code used to generate figures used either in the main manuscript or the supplement
+
+**install.R**: R code to install and load packages (libraries) that are needed to run the models and generate figures
+
 **modeling_code**: workflow code used to run different modeling experiments
 
-**other_code**: code used, e.g., for data exploration or analysis of model output
+**other_code**: code used, e.g., for data exploration or figures for presentations
 
 **visualizations**: all visualizations other than the default model output visualizations housed in the *experiments* folder
 
-## Guide to experiments, listed in chronological order of when they were performed: 
+### Guide for reviewers:
 
-**individual_effect**: state-space model with individual tree effect only
+#### Recommended workflow for review
 
-**plot_effect**: state-space model with plot effect only
+1. Run `install.R` to be sure you have the necessary libraries loaded.
+2. Because the Bayesian hierarchical models are compute-intensive (we used a high-performance cluster to complete model runs for the manuscript), we recommend to run the example model for 100 individuals for one tree species, located in `modeling_code/run_model_example.R` to review the modeling workflow. This script will load USFS FIA data from our data publication, generate a `.csv` file of processed data which will be needed to generate the final figures for the manuscript, and do an example run of the Bayesian hierarchical model for 100 individuals of *Prunus serotina*.
+3. Complete all analyses and generate final figures in the manuscript using the scripts in the `figure_code` file. Specifically, to generate the manuscript figure, run:
+    a. `Fig1.R`
+    b. `Fig2.R`
+    c. `Fig3.R`
+    d. `Fig4.R`
+    e. `Fig5.R`
+    
+#### Funding
+Funding for this project was provided by the U.S. National Park Service.
 
-**individual_and_plot_effect**: state-space model with both individual and plot effects
-
-**model_growth_directly**: modeling growth directly (not a state space model) with both individual and plot effects
-
-**broader_p4_prior**: modeling growth directly (not a state space model) with both individual and plot effects and a broader p4 prior (dunif(-1000,1000)) to avoid constraining the lognormal curve
-
-**linear_model**: modeling growth directly with a linear rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect
-
-**quadratic_model**: modeling growth directly with a quadratic rather than lognormal term for the effect of N deposition on growth, where the effect of N deposition is added to the nested individual/plot effect 
-
-**delta_Ndep**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a tree, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate
-
-**delta_Ndep_only**: modeling growth directly with a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate; the separate linear term for the historic rate of N deposition is omitted from this model
-
-**delta_env**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'
-
-**new_delta_Ndep_only**: modeling growth directly with a linear term for delta Ndep; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'
-
-**N_species**: modeling growth directly with a linear term for delta Ndep, with Ndep broken out into Ndep from oxidized and reduced forms of nitrogen; all other environmental variables are also included (S, temp, precip)
-
-**N_species_saveTreeEffect**: same as *N_species* model but saves all tree effects
-to permit assessment of model performance across all individuals
-
-**new_delta_Ndep_only_saveTreeEffect**: same as *new_delta_Ndep_only* but saves all tree effects to assessment of model performance across all individuals
-
-**delta_env_saveTreeEffect**: same as *delta_env* but saves all tree effects to permit assessment of model performance across all individuals
-
-**ozone**: modeling growth directly with a linear term for delta Ndep, which is calculated as the difference between Ndep during the current interval and Ndep averaged across all intervals for a plot, with Ndep broken out into Ndep from oxidized and reduced forms of nitrogen; delta terms for all other environmental variables are also included (S, temp, precip, and ozone)
-
-**unpacking_plot_effect**: same as *ozone* but includes terms for interval means
-of reduced and oxidized N deposition in addition to all the delta terms
-
-**historic_deviation**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a plot, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate; also saves tree effects and models N as two species, reduced and oxidized
-
-**historic_deviation_interaction**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a plot, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate, as well as a linear term for the interaction between the baseline and the deviation (beta* deviation * baseline); also saves tree effects and models N as two species, reduced and oxidized
-
-**historic_deviation_S**: modeling growth directly with a linear term for the historic rate of N deposition, which is N deposition in the 15 years prior to the first measurement for a plot, as well as a linear term for delta Ndep, which is the N deposition rate at the current measurement - the historic rate; also saves tree effects and models N as two species, reduced and oxidized; also includes linear terms for historic rates of S deposition and delta Sdep
-
-**baseline_proportion**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'; importantly, this model includes a linear term relating growth to the 'baseline proportion' of N deposition, where the baseline is N deposition in the 15 years prior to the first measurement for a plot and the proportion is calculated by dividing the current interval measurement of N deposition by that baseline
-
-**baseline_proportion_N_species**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'; importantly, this model includes a linear term relating growth to the 'baseline proportion' of N deposition, where the baseline is N deposition in the 15 years prior to the first measurement for a plot and the proportion is calculated by dividing the current interval measurement of N deposition by that baseline; in this model, N deposition in broken out into oxidized and reduced N deposition
-
-**baseline_prop_interaction**: modeling growth directly with a linear term for delta Ndep as well as similar linear terms for deltas of air temperature, precip, and sulfur deposition; deltas are calculated differently from previous models; deltas are now calculated as the difference from the mean of all the observations of that variable for a given tree, rather than as a difference from a 'historical level'; importantly, this model includes a linear term relating growth to the 'baseline proportion' of N deposition, where the baseline is N deposition in the 15 years prior to the first measurement for a plot and the proportion is calculated by dividing the current interval measurement of N deposition by that baseline; in addition to this baseline term, there are three more linear terms for the interactions between: 1) N deposition deviation and mean S deposition across the entire measurement period of a plot; 2) N deposition deviation and mean air temperature across the entire measurement period of a plot; 3) N deposition deviation and mean precipitation across the entire measurement period of a plot
-
-**short-term_long-term**: modeling growth directly with three linear terms representing N deposition: 1) "baseline" N deposition, which is the N deposition from the fifteen years prior to the first measurement of a plot; 2) "long-term" change N deposition, which is mean N deposition across all the measurement intervals of a plot within our dataset subtracted from the baseline; and 3) "short-term" change in N deposition, which is N deposition during the current measurement interval subtracted from the mean N deposition across all the measurement intervals of a plot
-
-**space_vs_time**: modeling growth directly with two linear terms representing N deposition: 1) "spatial" N deposition, which is the weighted average of N deposition from the fifteen years prior to the first measurement as well as N deposition of all measurement intervals up to the current interval; 2) "temporal" N deposition, which is the difference between N deposition during the current interval and the weighted average of previous N deposition; delta terms for other environmental variables (S deposition, temperature, precipitation) are also included
-
-**space_vs_time_ortho**: modeling growth directly with two linear terms representing N deposition: 1) "spatial" N deposition, which is the antecedent N deposition for the 15 years prior to the current interval; 2) "temporal" N deposition, which is the difference between the current interval N deposition and antecedent N deposition; there are also two equivalent terms for S deposition; moreover, the terms for N and S deposition are all orthogonalized with respect to each other following Michael Schwob's email on 18SEP25 with an approach for double orthogonalization
-
-**space_vs_time_ortho_log**: modeling LOG growth directly with two linear terms representing N deposition: 1) "spatial" N deposition, which is the antecedent N deposition for the 15 years prior to the current interval; 2) "temporal" N deposition, which is the difference between the current interval N deposition and antecedent N deposition; there are also two equivalent terms for S deposition; moreover, the terms for N and S deposition are all orthogonalized with respect to each other following Michael Schwob's email on 18SEP25 with an approach for double orthogonalization
-
-**space_vs_time_ortho_log_t**: modeling LOG growth directly with two linear terms representing N deposition: 1) "spatial" N deposition, which is the antecedent N deposition for the 15 years prior to the current interval; 2) "temporal" N deposition, which is the difference between the current interval N deposition and antecedent N deposition; there are also two equivalent terms for S deposition; moreover, the terms for N and S deposition are all orthogonalized with respect to each other following Michael Schwob's email on 18SEP25 with an approach for double orthogonalization; also using a t distribution for the observation model
-
-**space_vs_time_ortho_log_interaction**: modeling LOG growth directly with two linear terms representing N deposition: 1) "spatial" N deposition, which is the antecedent N deposition for the 15 years prior to the current interval; 2) "temporal" N deposition, which is the difference between the current interval N deposition and antecedent N deposition; there are also two equivalent terms for S deposition; moreover, the terms for N and S deposition are all orthogonalized with respect to each other following Michael Schwob's email on 18SEP25 with an approach for double orthogonalization; also modeling the interaction between antecedent and recent N dep with two terms: 1) recent Ndep * antecedent Ndep and recent Ndep^2
-
-**space_vs_time_ortho_t**: modeling growth directly with two linear terms representing N deposition: 1) "spatial" N deposition, which is the antecedent N deposition for the 15 years prior to the current interval; 2) "temporal" N deposition, which is the difference between the current interval N deposition and antecedent N deposition; there are also two equivalent terms for S deposition; moreover, the terms for N and S deposition are all orthogonalized with respect to each other following Michael Schwob's email on 18SEP25 with an approach for double orthogonalization; also using a t distribution for the observation model
+#### Disclaimer text
+Is there anything here that is needed?

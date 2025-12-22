@@ -28,7 +28,7 @@ df <- read_csv("./data/processed_data.csv")
 #'A. plots by ecoregion
 
 # Set the path to your downloaded and unzipped shapefile
-shapefile_path <- "na_cec_eco_L1/NA_CEC_Eco_Level1.shp"
+shapefile_path <- "./data/na_cec_eco_L1/NA_CEC_Eco_Level1.shp"
 
 # Read the shapefile into R
 na_ecoregions <- st_read(shapefile_path)
