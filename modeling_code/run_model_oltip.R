@@ -189,7 +189,7 @@ df <- read_csv("./data/processed_data.csv")
 total_species <- length(unique(df$common_name))
 #total_species <- c("ponderosa pine","eastern cottonwood")
 
-sim <- "ortho_log_t_interaction_adj_priors"
+sim <- "ortho_log_t_interaction_01JAN26"
 print(sim)
 
 if(sim %in% c("historic_deviation_interaction","historic_deviation",
@@ -201,7 +201,7 @@ df <- focal_df3 %>%
   ungroup() 
 }
 
-source("./modeling_code/ortho_log_t_interaction_adj_priors.R")
+source("./modeling_code/ortho_log_t_interaction_01JAN26.R")
 
 # for(k in 8:total_species){
 #   run_model(k, df, sim)
