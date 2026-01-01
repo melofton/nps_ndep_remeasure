@@ -13,8 +13,8 @@ library(furrr)
 mem.maxVSize(vsize = Inf)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
-  dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) %>%
-  dplyr::filter(!AG_carbon_pYear < -2000)
+  dplyr::filter(!(common_name %in% c("Douglas-fir","western hemlock"))) %>%
+  dplyr::filter(!(AG_carbon_pYear < -2000))
 #filter(common_name %in% c("eastern cottonwood"))
 
 focal_df <- og_df %>%
@@ -180,7 +180,7 @@ df <- focal_df5 %>%
   group_by(tree_ID) %>%
   mutate(num_intervals = max(interval_no, na.rm = TRUE)) %>%
   ungroup() %>%
-  dplyr::filter(num_intervals >= 1 & !Dep_Nhistoric > 60)
+  dplyr::filter(num_intervals >= 1 & !(Dep_Nhistoric > 60))
 
 write.csv(df, "./data/processed_data.csv", row.names = FALSE)
 
