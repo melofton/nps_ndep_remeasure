@@ -28,7 +28,7 @@ source("./other_code/hull2poly.R")
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 # list files in model output folder
-out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
+out <- list.files("./experiments/ortho_log_t_interaction_01JAN26",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
 # read in and combine model output files to get posterior distributions of parameters
@@ -51,7 +51,9 @@ for(i in 1:length(out)){
 # a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
-  select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) 
+  filter(!(spp_id == "sugar maple" & .iteration <= 1500)) %>%
+  filter(!(spp_id == "ponderosa pine" & .iteration <= 1000)) %>%
+  select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12)
 
 # read in pre-processed data (used in models)
 df <- read_csv("./data/processed_data.csv")
@@ -170,7 +172,7 @@ for(i in 1:length(ecoregions)){
     
     # get values of model parameters for that species
     model_output <- final1 %>% filter(spp_id == common_names[j],
-                                      model_id == "ortho_log_t_interaction_adj_priors")
+                                      model_id == "ortho_log_t_interaction_01JAN26")
     params <- model_output[sample(nrow(model_output), 1000), ]
     
     # back transformation of model parameters to SO space
@@ -229,6 +231,8 @@ for(i in 1:length(ecoregions)){
   }
   
 }
+
+#### Figure 4
 
 # get predictions for most common ecoregion
 letters_df <- data.frame(species = sort(unique(final_pred_df$species)),
@@ -303,7 +307,7 @@ p <- ggplot(data = plot_data)+
   labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
   theme(strip.text = element_text(size = 12))
-
+p
 ggsave(p,filename = "./visualizations/final_figures/Figure4.png",
        device = "png", height = 6.5, width = 9.5, units = "in")
 
@@ -317,6 +321,93 @@ mean_pred_responses <- final_pred_df %>%
   mutate(perc_change = mean_pred / pred_baseline * 100) %>%
   arrange(change_type, perc_change) %>%
   right_join(., fig4_ecos)
+
+##### Figure 5
+
+plot_data2 <- plot_data %>%
+  group_by(species, change_type, ecoregion) %>%
+  summarize(pred = mean(pred, na.rm = TRUE)) %>%
+  pivot_wider(names_from = change_type, values_from = pred) %>%
+  add_column(spp_abbrevs = c("Acsa","Bepa","Litu","Piru","Pipo","Pode","Potr","Prse"))
+
+plot_data3 <- final_pred_df %>%
+  select(species, ecoregion, pred_baseline) %>%
+  distinct(.) %>%
+  mutate(pred_baseline = round(pred_baseline, 2))
+
+plot_data4 <- left_join(plot_data2, plot_data3, by = c("species","ecoregion")) %>%
+  mutate(antecedent = antecedent / pred_baseline * 100,
+         `short-term` = `short-term` / pred_baseline * 100)
+
+plot_data5 <- plot_data %>%
+  arrange(species, ecoregion, change_type) %>%
+  add_column(draw = rep(c(1:1000),times = 16)) %>%
+  group_by(species, change_type, ecoregion, draw) %>%
+  pivot_wider(names_from = change_type, values_from = pred) %>%
+  select(-draw) 
+
+plot_data6 <- left_join(plot_data5, plot_data3, by = c("species","ecoregion")) %>%
+  mutate(antecedent = antecedent / pred_baseline * 100,
+         `short-term` = `short-term` / pred_baseline * 100)
+
+fig5 <- ggplot()+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  geom_point(data = plot_data6, aes(x = antecedent, y = `short-term`, group = species, color = ecoregion), size = 0.5, alpha = 0.5)+
+  geom_label(data = plot_data4, aes(x = antecedent, y = `short-term`, group = species, label = spp_abbrevs, fill = ecoregion))+
+  #xlim(c(-0.4, 0.4))+
+  #ylim(c(-0.4, 0.4))+
+  theme_classic()+
+  ylab(expression(atop(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1),"short-term N dep. decrease")))+
+  xlab(expression(atop(paste("% growth change w/ 1 kg ",ha^-1," ",yr^-1),"antecedent N dep. decrease")))+
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 16))+
+  annotate(
+    "text",
+    x = -Inf, y = Inf,
+    hjust = -0.5, vjust = 1,
+    label = "H4",
+    size = 6,         # Adjust text size
+    color = "black",    # Adjust text color
+    fontface = 2
+  )+
+  annotate(
+    "text",
+    x = -Inf, y = -Inf,
+    hjust = -0.5, vjust = -1,
+    label = "H1",
+    size = 6,         # Adjust text size
+    color = "black",    # Adjust text color
+    fontface = 2
+  )+
+  annotate(
+    "text",
+    x = Inf, y = -Inf,
+    hjust = 1, vjust = -1,
+    label = "H3",
+    size = 6,         # Adjust text size
+    color = "black",    # Adjust text color
+    fontface = 2
+  )+
+  annotate(
+    "text",
+    x = Inf, y = Inf,
+    hjust = 1, vjust = 1,
+    label = "H2",
+    size = 6,         # Adjust text size
+    color = "black",    # Adjust text color
+    fontface = 2
+  )+
+  scale_y_continuous(breaks = breaks_width(1))+
+  scale_fill_discrete(name = "Ecoregion",
+                      labels = function(x) str_wrap(x, width = 30))+
+  scale_color_discrete(name = "Ecoregion",
+                      labels = function(x) str_wrap(x, width = 30))
+
+fig5
+
+ggsave(fig5,filename = "./visualizations/final_figures/Figure5.png",
+       device = "png", height = 7, width = 9, units = "in")
 
 #### END OF CODE FOR FINAL FIGURE INCLUDED IN MANUSCRIPT
 
