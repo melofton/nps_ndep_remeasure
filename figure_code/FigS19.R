@@ -28,7 +28,7 @@ source("./other_code/hull2poly.R")
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 # list files in model output folder
-out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
+out <- list.files("./experiments/ortho_log_t_interaction_01JAN26",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
 # read in and combine model output files to get posterior distributions of parameters
@@ -51,6 +51,8 @@ for(i in 1:length(out)){
 # a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
+  filter(!(spp_id == "sugar maple" & .iteration <= 1500)) %>%
+  filter(!(spp_id == "ponderosa pine" & .iteration <= 1000)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) %>%
   group_by(model_id, spp_id) %>%
   summarise(across(global_tree_effect:p12, \(x) mean(x, na.rm = TRUE)))
@@ -170,7 +172,7 @@ for(i in 1:length(ecoregions)){
     
     # get mean values of model parameters for that species
     params <- final1 %>% filter(spp_id == common_names[j],
-                                model_id == "ortho_log_t_interaction_adj_priors")
+                                model_id == "ortho_log_t_interaction_01JAN26")
     
     # back transformation of model parameters to SO space
     # p5 is coefficient on recent N dep; p12 is coefficient on recent N dep quadratic term
@@ -240,7 +242,27 @@ facet_label_df <- final_pred_df %>%
   select(species, ecoregion, facet_labels)
 
 plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%
-  arrange(species)
+  arrange(species) %>%
+  mutate(bins = cut(
+    pred,
+    breaks = seq(-60, 70, by = 10),
+    labels = c("(-59.9)-(-50)","(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
+               "(-9.9)-0","0.1-10","10.1-20","20.1-30","30.1-40","40.1-50","50.1-60","60.1-70"),
+    right = TRUE # (0, 29] means up to and including 29
+  ))
+
+check <- plot_data %>%
+  filter(is.na(bins))
+
+# Define number of bins
+n_bins <- length(unique(plot_data$bins))
+
+# Get hex codes for n bins
+color_hex_codes <- colorRampPalette(c("#D5B60A","lightyellow","darkblue"))(n_bins) # Option "D" is default viridis
+names(color_hex_codes) <- c("(-59.9)-(-50)","(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
+                            "(-9.9)-0","0.1-10","10.1-20","20.1-30","30.1-40","40.1-50","50.1-60","60.1-70")
+show_col(color_hex_codes)
+color_hex_codes
 
 plots <- NULL
 
@@ -258,12 +280,13 @@ for(j in 1:length(species_list)){
   for(k in 1:length(ecoreg)){
     
     plot_dat2 <- plot_dat %>%
-      filter(ecoregion == ecoreg[k]) 
+      filter(ecoregion == ecoreg[k]) %>%
+      arrange(pred)
     
     plots[[l]] <- ggplot(data = plot_dat2)+
-      geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = pred, color = pred), shape = 21)+
-      scale_fill_viridis_c(direction = -1)+
-      scale_color_viridis_c(direction = -1)+
+      geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins), shape = 21)+
+      scale_color_manual(values = color_hex_codes)+
+      scale_fill_manual(values = color_hex_codes)+
       facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
       theme_bw()+
       xlab(c)+
@@ -273,14 +296,44 @@ for(j in 1:length(species_list)){
       ylab(NULL)+
       geom_hline(yintercept = 0, linetype = 2)+
       geom_vline(xintercept = 0, linetype = 2)+
-      theme(strip.text = element_text(size = 12),
-            panel.grid = element_blank())
+      theme(strip.text = element_text(size = 15),
+            panel.grid = element_blank(),
+            strip.background = element_rect(fill = "white"),
+            legend.position = "none")+
+      guides(color = guide_legend(override.aes = list(size = 3)))
     l <- l + 1
   }
   
 }
 
-money_plot <- ggarrange(plotlist = plots, ncol = 6, nrow = 5)#, labels = LETTERS[1:length(plots)])
+leg_plot <-  ggplot(data = plot_data)+
+  geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins), shape = 21)+
+  scale_color_manual(values = color_hex_codes)+
+  scale_fill_manual(values = color_hex_codes)+
+  facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
+  theme_bw()+
+  xlab(c)+
+  ylab(expression(paste("recent N dep. change  (kg N ", ha^-1," ",yr^-1,")")))+
+  labs(fill = "% change \nin growth", color = "% change \nin growth")+
+  xlab(NULL)+
+  ylab(NULL)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  geom_vline(xintercept = 0, linetype = 2)+
+  theme(strip.text = element_text(size = 15),
+        panel.grid = element_blank(),
+        strip.background = element_rect(fill = "white"))+
+  guides(color = guide_legend(override.aes = list(size = 3)))
+leg_plot
+
+# Extract the legend. Returns a gtable
+figs19_leg <- get_legend(leg_plot)
+
+# Convert to a ggplot and print
+figs19_leg2 <- as_ggplot(figs19_leg)
+figs19_leg2
+
+money_plot <- ggarrange(ggarrange(plotlist = plots, ncol = 6, nrow = 5),
+                        figs19_leg2, ncol = 2, nrow = 1, widths = c(7,1))#, labels = LETTERS[1:length(plots)])
 
 final_plot <- annotate_figure(
   money_plot,

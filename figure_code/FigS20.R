@@ -17,6 +17,8 @@ library(scales)
 library(metR)
 library(grid)
 library(alphahull)
+library(ggh4x)
+library(ggpattern)
 
 # needed for creating factorial combinations of S and N dep and for orthogonalization
 mem.maxVSize(vsize = Inf)
@@ -28,7 +30,7 @@ source("./other_code/hull2poly.R")
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 # list files in model output folder
-out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
+out <- list.files("./experiments/ortho_log_t_interaction_01JAN26",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
 # read in and combine model output files to get posterior distributions of parameters
@@ -51,7 +53,9 @@ for(i in 1:length(out)){
 # a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
-  select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) 
+  filter(!(spp_id == "sugar maple" & .iteration <= 1500)) %>%
+  filter(!(spp_id == "ponderosa pine" & .iteration <= 1000)) %>%
+  select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12)
 
 # read in pre-processed data (used in models)
 df <- read_csv("./data/processed_data.csv")
@@ -170,7 +174,7 @@ for(i in 1:length(ecoregions)){
     
     # get values of model parameters for that species
     model_output <- final1 %>% filter(spp_id == common_names[j],
-                                      model_id == "ortho_log_t_interaction_adj_priors")
+                                      model_id == "ortho_log_t_interaction_01JAN26")
     params <- model_output[sample(nrow(model_output), 1000), ]
     
     # back transformation of model parameters to SO space
@@ -230,8 +234,8 @@ for(i in 1:length(ecoregions)){
   
 }
 
-# get predictions for all ecoregions with > 100 trees
-fig5_eco <- df1 %>%
+# get predictions for all ecoregions with < 100 trees
+figs20_eco <- df1 %>%
   filter(n_trees_ecoregion < 100) %>%
   rename(ecoregion = ecoregion_ortho) %>%
   select(species, ecoregion, n_trees_ecoregion)
@@ -239,9 +243,9 @@ fig5_eco <- df1 %>%
 letters_df <- final_pred_df %>%
   select(species, ecoregion) %>%
   distinct(.) %>%
-  right_join(., fig5_eco) %>%
+  right_join(., figs20_eco) %>%
   arrange(species, ecoregion) %>%
-  mutate(letters = paste0(letters[seq_len(nrow(fig5_eco))],"."))
+  mutate(letters = paste0(letters[seq_len(nrow(figs20_eco))],"."))
 
 facet_label_df <- final_pred_df %>%
   select(species, ecoregion, pred_baseline) %>%
@@ -258,23 +262,52 @@ facet_label_df <- final_pred_df %>%
   select(species, ecoregion, facet_labels)
 
 plot_data <- right_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%
-  arrange(species)
+  arrange(species) %>%
+  mutate(perc_change = pred / pred_baseline * 100) 
 
 my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
 
+spp_col <- data.frame(panel_fill_cols = colorblind_pal()(8)[c(2,6)],
+                      species = unique(plot_data$species))
+show_col(spp_col$panel_fill_cols)
+
+strip_cols <- right_join(facet_label_df, spp_col, by = c("species")) %>%
+  arrange(species, ecoregion) %>%
+  pull(panel_fill_cols)
+better_strip_cols <- alpha(strip_cols, 0.3)
+
+x_lims <- plot_data %>%
+  select(species, perc_change) %>%
+  group_by(species) %>%
+  summarize(min = round(min(perc_change, na.rm = TRUE),2),
+            max = round(max(perc_change, na.rm = TRUE),2)) %>%
+  right_join(facet_label_df, by = "species")
+
+facet_lims_lst <- NULL
+for(i in 1:nrow(x_lims)){
+  facet_lims_lst[[i]] <- scale_x_continuous(limits = c(x_lims$min[i],x_lims$max[i]))
+}
 
 p <- ggplot(data = plot_data)+
-  geom_density(aes(x = pred, group = change_type, 
-                   color = change_type, fill = change_type),
-               alpha = 0.5)+
-  facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
+  ggpattern::geom_density_pattern(aes(x = perc_change, group = change_type, pattern = change_type, fill = change_type),
+                                  color = "black", pattern_color = "white")+
+  ggh4x::facet_wrap2(~ facet_labels, scales = "free", labeller = label_parsed,
+                     # Use strip_themed() to apply aesthetics
+                     strip = ggh4x::strip_themed(
+                       # Map 'fill' to the 'cyl_factor' variable
+                       background_x = lapply(better_strip_cols, element_rect, color = "black"),
+                     ),
+                     nrow = 7, ncol = 4
+  ) +
+  # Manually set colors for the factor levels for clarity
   theme_bw()+
-  scale_color_manual(values = my_col)+
-  scale_fill_manual(values = my_col)+
+  scale_fill_manual(values = c("white","gray"))+
   geom_vline(xintercept = 0)+
-  labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
+  labs(color = "", fill = "", pattern = "", x = expression(paste("% change in growth")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
-  theme(strip.text = element_text(size = 12))
+  theme(strip.text = element_text(size = 12))+
+  ggh4x::facetted_pos_scales(x = facet_lims_lst)+
+  scale_pattern_manual(values = c("none","circle"))
 
 ggsave(p,filename = "./visualizations/final_figures/FigureS20.png",
        device = "png", height = 3, width = 10, units = "in")

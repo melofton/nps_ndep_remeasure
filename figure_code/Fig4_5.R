@@ -17,6 +17,7 @@ library(scales)
 library(metR)
 library(grid)
 library(alphahull)
+library(ggpattern)
 
 # needed for creating factorial combinations of S and N dep and for orthogonalization
 mem.maxVSize(vsize = Inf)
@@ -271,8 +272,9 @@ for(i in 1:length(spp)){
   
 
     species_pred_eco <- final_pred_df %>%
+      mutate(perc_change = pred / pred_baseline * 100) %>%
       filter(species == spp[i] & ecoregion == most_n_eco) %>%
-      pull(pred)
+      pull(perc_change)
   
   final_pred_species <- data.frame(species = spp[i],
                                    change_type = rep(c("short-term","antecedent"),each = 1000),
@@ -292,21 +294,18 @@ for(i in 1:length(spp)){
 plot_data <- left_join(final_pred, facet_label_df, by = c("species", "ecoregion") ) %>%
   arrange(species)
 
-my_col <- c(RColorBrewer::brewer.pal(3, "Blues")[3],"orange")
-
-
 p <- ggplot(data = plot_data)+
-  geom_density(aes(x = pred, group = change_type, 
-                   color = change_type, fill = change_type),
-               alpha = 0.5)+
-  facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+
+  ggpattern::geom_density_pattern(aes(x = pred, group = change_type, pattern = change_type, fill = change_type),
+                                  color = "black", pattern_color = "white")+
+  facet_wrap(~facet_labels, scales = "free_y", labeller = label_parsed)+
   theme_bw()+
-  scale_color_manual(values = my_col)+
-  scale_fill_manual(values = my_col)+
+  scale_fill_manual(values = c("white","gray"))+
   geom_vline(xintercept = 0)+
-  labs(color = "", fill = "", x = expression(paste("change in growth (kg C ", y^-1," ",ind^-1,")")))+
+  labs(color = "", fill = "",pattern = "", x = expression(paste("% change in growth")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
-  theme(strip.text = element_text(size = 12))
+  theme(strip.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"))+
+  scale_pattern_manual(values = c("none","circle"))
 p
 ggsave(p,filename = "./visualizations/final_figures/Figure4.png",
        device = "png", height = 6.5, width = 9.5, units = "in")
