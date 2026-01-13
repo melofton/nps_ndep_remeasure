@@ -184,15 +184,15 @@ run_model <- function(k, df, sim){
                 "nu")
   
   if(tree_species == "sugar maple"){
-    
-    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=20000, thin = 5)
-    start.iter <- seq(from = 5005, to = 25000, by = 5)[1001]
+
+    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=20000, thin = 1)
+    start.iter <- seq(from = 5001, to = 25000, by = 1)[15001]
     ssFit <- window(ssFit, start = start.iter)
-    
+
   } else {
     
-    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=30000, thin = 5)
-    start.iter <- seq(from = 5005, to = 35000, by = 5)[3001]
+    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=30000, thin = 1)
+    start.iter <- seq(from = 5001, to = 35000, by = 1)[25001]
     ssFit <- window(ssFit, start = start.iter)
     
   }
