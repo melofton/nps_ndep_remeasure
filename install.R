@@ -8,7 +8,8 @@
 # install packages
 install.packages(c("tidyverse", "lubridate", "rjags", "tidybayes", "bayesplot",
                    "furrr", "sf", "viridis", "ggthemes", "ggpubr", "rnaturalearth",
-                   "scales", "arrow", "stringr", "metR", "grid", "alphahull"))
+                   "scales", "arrow", "stringr", "metR", "grid", "alphahull",
+                   "ggh4x","ggpattern"))
 
 # load packages
 library(tidyverse)
@@ -28,3 +29,5 @@ library(stringr)
 library(metR)
 library(grid)
 library(alphahull)
+library(ggh4x)
+library(ggpattern)
