@@ -52,8 +52,6 @@ for(i in 1:length(out)){
 # a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
-  filter(!(spp_id == "sugar maple" & .iteration <= 1500)) %>%
-  filter(!(spp_id == "ponderosa pine" & .iteration <= 1000)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12)
 
 # read in pre-processed data (used in models)
@@ -303,10 +301,12 @@ p <- ggplot(data = plot_data)+
   geom_vline(xintercept = 0)+
   labs(color = "", fill = "",pattern = "", x = expression(paste("% change in growth")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
+  scale_pattern_manual(values = c("none","circle"))+
   theme(strip.text = element_text(size = 12),
-        strip.background = element_rect(fill = "white"))+
-  scale_pattern_manual(values = c("none","circle"))
-p
+        strip.background = element_rect(fill = "white"),
+        legend.position = c(0.85, 0.2),
+        legend.key.size = unit(1, "cm"),
+        legend.text = element_text(size = 16))
 ggsave(p,filename = "./visualizations/final_figures/Figure4.png",
        device = "png", height = 6.5, width = 9.5, units = "in")
 
@@ -329,31 +329,43 @@ plot_data2 <- plot_data %>%
   pivot_wider(names_from = change_type, values_from = pred) %>%
   add_column(spp_abbrevs = c("Acsa","Bepa","Litu","Piru","Pipo","Pode","Potr","Prse"))
 
-plot_data3 <- final_pred_df %>%
-  select(species, ecoregion, pred_baseline) %>%
-  distinct(.) %>%
-  mutate(pred_baseline = round(pred_baseline, 2))
-
-plot_data4 <- left_join(plot_data2, plot_data3, by = c("species","ecoregion")) %>%
-  mutate(antecedent = antecedent / pred_baseline * 100,
-         `short-term` = `short-term` / pred_baseline * 100)
-
 plot_data5 <- plot_data %>%
   arrange(species, ecoregion, change_type) %>%
   add_column(draw = rep(c(1:1000),times = 16)) %>%
   group_by(species, change_type, ecoregion, draw) %>%
   pivot_wider(names_from = change_type, values_from = pred) %>%
+  ungroup() %>%
   select(-draw) 
 
-plot_data6 <- left_join(plot_data5, plot_data3, by = c("species","ecoregion")) %>%
-  mutate(antecedent = antecedent / pred_baseline * 100,
-         `short-term` = `short-term` / pred_baseline * 100)
+my.cols.og <- hue_pal()(3)
+my.cols.og
+my.cols <- c(NA,"#F8766D","#faa49e","#fdd1ce",NA,"#008729","#00BA38","#00fa4b","#7affa2",NA,"#619CFF")
+
+spp_eco <- plot_data2 %>%
+  select(ecoregion, species, spp_abbrevs) %>%
+  arrange(ecoregion) %>%
+  distinct(.)
+cols <- data.frame(species = c(spp_eco$species,NA,NA,NA),
+                   legend_var = c(spp_eco$species,unique(spp_eco$ecoregion))) 
+lev <- cols$legend_var
+plot_data3 <- full_join(plot_data2, cols, by = "species") %>%
+  mutate(legend_var = factor(legend_var, levels = c(lev[9],lev[1],lev[2],lev[3],lev[10],lev[4],lev[5],lev[6],lev[7],lev[11],lev[8]))) %>%
+  mutate(antecedent_lab = ifelse(spp_abbrevs %in% c("Potr","Bepa"),antecedent + 0.4,
+                             ifelse(spp_abbrevs == "Acsa",antecedent + 0.4, antecedent))) %>%
+  mutate(`short-term_lab` = ifelse(spp_abbrevs %in% c("Potr","Bepa"),`short-term` + 0.4,
+                             ifelse(spp_abbrevs == "Acsa",`short-term` - 0.4, `short-term`)))
+plot_data6 <- full_join(plot_data5, cols, by = "species") %>%
+  mutate(legend_var = factor(legend_var, levels = c(lev[9],lev[1],lev[2],lev[3],lev[10],lev[4],lev[5],lev[6],lev[7],lev[11],lev[8])))
+
+seg_dat <- plot_data3 %>%
+  filter(spp_abbrevs %in% c("Acsa","Bepa","Potr"))
 
 fig5 <- ggplot()+
   geom_hline(yintercept = 0)+
   geom_vline(xintercept = 0)+
-  geom_point(data = plot_data6, aes(x = antecedent, y = `short-term`, group = species, color = ecoregion), size = 0.5, alpha = 0.5)+
-  geom_label(data = plot_data4, aes(x = antecedent, y = `short-term`, group = species, label = spp_abbrevs, fill = ecoregion))+
+  geom_point(data = plot_data6, aes(x = antecedent, y = `short-term`, group = species, color = legend_var), size = 0.5, alpha = 0.5)+
+  geom_segment(data = seg_dat, aes(x = antecedent_lab, y = `short-term_lab`, xend = antecedent, yend = `short-term`))+
+  geom_label(data = plot_data3, aes(x = antecedent_lab, y = `short-term_lab`, group = species, label = spp_abbrevs, fill = legend_var))+
   #xlim(c(-0.4, 0.4))+
   #ylim(c(-0.4, 0.4))+
   theme_classic()+
@@ -365,7 +377,7 @@ fig5 <- ggplot()+
     "text",
     x = -Inf, y = Inf,
     hjust = -0.5, vjust = 1,
-    label = "H4",
+    label = "H1",
     size = 6,         # Adjust text size
     color = "black",    # Adjust text color
     fontface = 2
@@ -374,7 +386,7 @@ fig5 <- ggplot()+
     "text",
     x = -Inf, y = -Inf,
     hjust = -0.5, vjust = -1,
-    label = "H1",
+    label = "H3",
     size = 6,         # Adjust text size
     color = "black",    # Adjust text color
     fontface = 2
@@ -383,7 +395,7 @@ fig5 <- ggplot()+
     "text",
     x = Inf, y = -Inf,
     hjust = 1, vjust = -1,
-    label = "H3",
+    label = "H4",
     size = 6,         # Adjust text size
     color = "black",    # Adjust text color
     fontface = 2
@@ -398,10 +410,15 @@ fig5 <- ggplot()+
     fontface = 2
   )+
   scale_y_continuous(breaks = breaks_width(1))+
-  scale_fill_discrete(name = "Ecoregion",
-                      labels = function(x) str_wrap(x, width = 30))+
-  scale_color_discrete(name = "Ecoregion",
-                      labels = function(x) str_wrap(x, width = 30))
+  scale_fill_manual(name = "Ecoregion",
+                      labels = function(x) str_wrap(x, width = 30),
+                    values = my.cols)+
+  scale_color_manual(name = "Ecoregion",
+                      labels = function(x) str_wrap(x, width = 30),
+                     values = my.cols)+
+  guides(color = guide_legend(override.aes = list(shape = c(NA,16,16,16,NA,16,16,16,16,NA,16),
+                                                  size = 3)),
+         fill = "none")
 
 fig5
 

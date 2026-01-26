@@ -51,8 +51,6 @@ for(i in 1:length(out)){
 # a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
-  filter(!(spp_id == "sugar maple" & .iteration <= 1500)) %>%
-  filter(!(spp_id == "ponderosa pine" & .iteration <= 1000)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12) %>%
   group_by(model_id, spp_id) %>%
   summarise(across(global_tree_effect:p12, \(x) mean(x, na.rm = TRUE)))
@@ -297,7 +295,7 @@ for(j in 1:length(species_list)){
   
   ggplot(plot_dat, aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins))+
     geom_point()+
-    scale_color_manual(values = viridis_hex_codes)
+    scale_color_manual(values = color_hex_codes)
  
   
     plots[[l]] <- ggplot(data = plot_dat)+
@@ -336,8 +334,6 @@ plots[[9]] <- ggplot(data = plot_dat0)+
         panel.grid = element_blank(),
         strip.background = element_rect(fill = "white"),
         legend.position = "none")+
-  ylim(c(-20, 20))+
-  xlim(c(-20, 20))+
   guides(color = guide_legend(override.aes = list(size = 3)))+
   annotate(
     "text",
@@ -374,7 +370,9 @@ plots[[9]] <- ggplot(data = plot_dat0)+
     size = 2.5,         # Adjust text size
     color = "black",    # Adjust text color
     fontface = 2
-  )
+  )+
+  scale_y_continuous(limits = c(-20, 20), breaks = c(-20, -10, 0, 10, 20), labels = c("-","",0,"","+"))+
+  scale_x_continuous(limits = c(-20, 20), breaks = c(-20, -10, 0, 10, 20), labels = c("-","",0,"","+"))
 plots[[9]]
 
 leg_plot <-  ggplot(data = plot_data)+
@@ -392,26 +390,32 @@ leg_plot <-  ggplot(data = plot_data)+
   geom_vline(xintercept = 0, linetype = 2)+
   theme(strip.text = element_text(size = 15),
         panel.grid = element_blank(),
-        strip.background = element_rect(fill = "white"))+
-  guides(color = guide_legend(override.aes = list(size = 3)))
+        strip.background = element_rect(fill = "white"),
+        legend.position = "bottom",
+        legend.key.size = unit(1.5, "cm"),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 16))+
+  guides(color = guide_legend(override.aes = list(size = 5)))
 leg_plot
 
 # Extract the legend. Returns a gtable
-fig5_leg <- get_legend(leg_plot)
+fig5_leg <- cowplot::get_plot_component(leg_plot, 'guide-box-bottom', return_all = TRUE)
 
 # Convert to a ggplot and print
 fig5_leg2 <- as_ggplot(fig5_leg)
 fig5_leg2
 
 
-money_plot <- ggarrange(ggarrange(plotlist = plots, ncol = 3, nrow = 3),
-                        fig5_leg2, ncol = 2, nrow = 1, widths = c(4,1))#, labels = LETTERS[1:length(plots)])
+money_plot <- ggarrange(ggarrange(plotlist = plots, ncol = 3, nrow = 3))#, labels = LETTERS[1:length(plots)])
 
-final_plot <- annotate_figure(
+labeled_plot <- annotate_figure(
   money_plot,
   left = textGrob(expression(paste("residual short-term change in N deposition (kg N ", ha^-1," ",yr^-1,")")), rot = 90, gp = gpar(cex = 1.3)),
   bottom = textGrob(expression(paste("residual antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")), gp = gpar(cex = 1.3))
 )
 
+final_plot <- ggarrange(labeled_plot,
+                        fig5_leg2, ncol = 1, nrow = 2, heights = c(7,1))
+
 ggsave(final_plot,filename = "./visualizations/final_figures/Figure6.png",
-       device = "png", bg = "white", height = 9, width = 13, units = "in")
+       device = "png", bg = "white", height = 10, width = 11, units = "in")

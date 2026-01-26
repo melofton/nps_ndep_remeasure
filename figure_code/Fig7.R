@@ -53,8 +53,6 @@ for(i in 1:length(out)){
 # a little data wrangling to get mean values of parameters and correct species names
 final1 <- final %>%
   mutate(spp_id = ifelse(spp_id == "yellow","yellow poplar",spp_id)) %>%
-  filter(!(spp_id == "sugar maple" & .iteration <= 1500)) %>%
-  filter(!(spp_id == "ponderosa pine" & .iteration <= 1000)) %>%
   select(model_id, spp_id, global_tree_effect, p2, p3, p5, p6, p7, p8, p9, p10, p11, p12)
 
 # read in pre-processed data (used in models)
@@ -305,7 +303,10 @@ p <- ggplot(data = plot_data)+
   geom_vline(xintercept = 0)+
   labs(color = "", fill = "", pattern = "", x = expression(paste("% change in growth")))+
   ggtitle(expression(paste("Marginal effect of N deposition decrease (per kg N ", ha^-1," ",y^-1,")")))+
-  theme(strip.text = element_text(size = 12))+
+  theme(strip.text = element_text(size = 12),
+        legend.position = c(0.77, 0.07),
+        legend.key.size = unit(1.5, "cm"),
+        legend.text = element_text(size = 16))+
   ggh4x::facetted_pos_scales(x = facet_lims_lst)+
   scale_pattern_manual(values = c("none","circle"))
 
