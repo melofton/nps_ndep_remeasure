@@ -14,7 +14,7 @@ library(arrow)
 library(ggpubr)
 library(ggthemes)
 library(ggpmisc)
-library(broom)
+library(ggh4x)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv" 
 model_output_folder = "./experiments/ortho_log_t_interaction_01JAN26"
@@ -224,7 +224,29 @@ model_output_folder = "./experiments/ortho_log_t_interaction_01JAN26"
   
   # take-home: confidence intervals are tiny and not going to be visible on figure
   
-  p2 <- ggplot(data = df3, aes(x = AG_carbon_pYear, y = pred))+
+  # remove outliers following request from Chris
+  # Calculate IQR limits for observed
+  Q1 <- quantile(df3$AG_carbon_pYear, 0.25)
+  Q3 <- quantile(df3$AG_carbon_pYear, 0.75)
+  IQR <- Q3 - Q1
+  lower_limit <- Q1 - 1.5 * IQR
+  upper_limit <- Q3 + 1.5 * IQR
+  
+  df4 <- df3 %>%
+    filter(AG_carbon_pYear > lower_limit & AG_carbon_pYear < upper_limit)
+  
+  custom_scales <- list(
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    scale_y_continuous(limits = c(-60, 40)), # Custom limits for Potr
+    NULL
+  )
+  
+  p2 <- ggplot(data = df4, aes(x = AG_carbon_pYear, y = pred))+
     geom_point()+
     geom_abline(slope = 1)+
     theme_bw()+
@@ -234,7 +256,8 @@ model_output_folder = "./experiments/ortho_log_t_interaction_01JAN26"
     stat_poly_eq(use_label(c("eq")), formula = y~x,label.y = 0.95)+
     stat_poly_eq(use_label(c("R2")), formula = y~x, label.y = 0.85)+
     xlab(expression(paste("observed tree growth (kg C ", y^-1," ",ind^-1,")")))+
-    ylab(expression(paste("predicted tree growth (kg C ", y^-1," ",ind^-1,")")))
+    ylab(expression(paste("predicted tree growth (kg C ", y^-1," ",ind^-1,")")))+
+    facetted_pos_scales(y = custom_scales)
 
   p3 <- ggplot(data = df3)+
     geom_point(aes(x = log_AG_carbon_pYear, y = pred_log))+
