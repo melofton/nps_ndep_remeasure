@@ -24,6 +24,8 @@ og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_c
 
 df <- read_csv("./data/processed_data.csv")
 
+ann_ndep <- read_csv("./data/Fig3_annual_plot_Ndep.csv")
+
 spp_df <- og_df %>%
   select(species, common_name) %>%
   distinct(.)
@@ -174,7 +176,10 @@ draw_key_vpath_reversed <- function(data, params, size) {
   )
 }
 
+my.cols <- c("#DEEBF7", "#9ECAE1", "#4292C6", "#084594")
+
 fig3_b <- ggplot()+
+  geom_point(data = ann_ndep, aes(x = datetime, y = ndep, shape = "annual N dep."))+
   geom_vline(data = intervals, aes(xintercept = datetime, linetype = legend_var, alpha = legend_var), color = "black")+
   geom_vline(data = intervals, aes(xintercept = datetime, linetype = legend_var, alpha = legend_var, color = as.factor(interval_no)), show.legend = FALSE)+
   geom_line(data = plot_data2, aes(x = datetime, y = Dep_N, group = interval_no_by_type, alpha = dep_type, linetype = dep_type), linewidth = 1, color = "black")+
@@ -198,10 +203,11 @@ fig3_b <- ggplot()+
     key_glyph = draw_key_vpath_reversed, show.legend = FALSE
   )+
   theme_classic()+
-  scale_color_discrete(name = "Interval")+
-  scale_alpha_manual(values = c(a_interval = 1, Dep_N = 0.5, Dep_Nhistoric = 1), name = NULL, labels = c("measurement interval \nstart/end date","current N dep.","antecedent N dep."))+
-  scale_linetype_manual(values = c(a_interval = 2, Dep_N = 2, Dep_Nhistoric = 1), name = NULL, labels = c("measurement interval \nstart/end date","current N dep.","antecedent N dep."))+
+  scale_color_manual(values = my.cols, name = "Interval")+
+  scale_alpha_manual(values = c(a_interval = 1, Dep_N = 0.5, Dep_Nhistoric = 1), name = NULL, labels = c("measurement interval \nstart/end date","current interval N dep.","antecedent N dep."))+
+  scale_linetype_manual(values = c(a_interval = 2, Dep_N = 2, Dep_Nhistoric = 1), name = NULL, labels = c("measurement interval \nstart/end date","current interval N dep.","antecedent N dep."))+
   scale_linewidth_manual(values = c("Dep_Ndiff" = 0.5), name = NULL, labels = c("short-term change in N dep."))+
+  scale_shape_manual(values = c("annual N dep." = 16), name = NULL)+
   xlab("")+
   ylab(expression(paste("N deposition (kg N ", ha^-1," ",y^-1,")")))+
   theme(legend.spacing.y = unit(0.0, "cm"),
