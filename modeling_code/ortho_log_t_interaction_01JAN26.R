@@ -166,7 +166,7 @@ run_model <- function(k, df, sim){
                      "p11" = init_values[k,"p11"] - init_values[k,"p11_delta"],
                      "p12" = init_values[k,"p12"] - init_values[k,"p12_delta"]))
   
-  ssFit    <- jags.model(data=ssData, file=paste0("./experiments/",sim,"/",sim,"-growthModel-",tree_species,".txt"), n.chains = 3, inits = inits, n.adapt = 5000)
+  ssFit    <- jags.model(data=ssData, file=paste0("./experiments/",sim,"/",sim,"-growthModel-",tree_species,".txt"), n.chains = 3, inits = inits, n.adapt = 10000)
   parNames <- c("tree_effect", 
                 "p2", 
                 "p3", 
@@ -184,20 +184,19 @@ run_model <- function(k, df, sim){
                 "nu")
   
   if(tree_species == "sugar maple"){
-
-    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=20000, thin = 1)
-    start.iter <- seq(from = 5001, to = 25000, by = 1)[15001]
+    
+    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=20000, thin = 5)
+    start.iter <- seq(from = 10005, to = 35000, by = 5)[2001]
     ssFit <- window(ssFit, start = start.iter)
-
+    
   } else {
     
-    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=30000, thin = 1)
-    start.iter <- seq(from = 5001, to = 35000, by = 1)[25001]
+    ssFit <- coda.samples(ssFit, variable.names = parNames, n.iter=30000, thin = 5)
+    start.iter <- seq(from = 10005, to = 45000, by = 5)[4001]
     ssFit <- window(ssFit, start = start.iter)
     
   }
   
-
   # get ESS
   ess_vars <- ssFit[, varnames(ssFit) %in% parNames]
   ess <- effectiveSize(ess_vars)
