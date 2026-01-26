@@ -13,9 +13,11 @@ library(lubridate)
 library(arrow)
 library(ggpubr)
 library(ggthemes)
+library(ggpmisc)
+library(broom)
 
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv" 
-model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
+model_output_folder = "./experiments/ortho_log_t_interaction_01JAN26"
 
   ## READ IN AND WRANGLE MODEL OUTPUT
   # list files
@@ -27,7 +29,7 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
       
       spp_name = str_split(out[i], pattern = "-")[[1]][6]
       model_name = str_split(out[i], pattern = "/")[[1]][3]
-      iters <- sample(c(1:3000),100)
+      iters <- sample(c(1:2000),100)
       
       temp <- read_parquet(file = out[i], as_data_frame = FALSE,col_select = c("n","tree_effect",".iteration")) |>
         filter(.iteration %in% iters) |>
@@ -48,7 +50,7 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
   for(i in 1:length(out)){
     
     model_name = str_split(out[i], pattern = "-")[[1]][2]
-    iters <- sample(c(1:3000),100)
+    iters <- sample(c(1:2000),100)
     
     message(model_name)
     
@@ -206,28 +208,34 @@ model_output_folder = "./experiments/ortho_log_t_interaction_adj_priors"
   
   p1 <- ggarrange(r2, rmse, ncol = 2)
   
-  eq_placement <- df3 %>%
+  grouped_models <- df3 %>%
+    select(species, AG_carbon_pYear, pred) %>%
     group_by(species) %>%
-    summarize(min_x = min(AG_carbon_pYear, na.rm = TRUE),
-           max_x = max(AG_carbon_pYear, na.rm = TRUE),
-           min_y = min(pred, na.rm = TRUE),
-           max_y = max(pred, na.rm = TRUE))
+    nest() %>%
+    mutate(model = map(data, ~lm(pred ~ AG_carbon_pYear, data = .)))
+  
+  model_results <- grouped_models %>%
+    mutate(
+      # Extracts coefficients, SE, p-values, and CIs
+      tidy_results = map(model, broom::tidy, conf.int = TRUE)
+    ) %>%
+    unnest(tidy_results) %>%
+    select(species, term, estimate, conf.low, conf.high, p.value) # Select relevant columns
+  
+  # take-home: confidence intervals are tiny and not going to be visible on figure
   
   p2 <- ggplot(data = df3, aes(x = AG_carbon_pYear, y = pred))+
     geom_point()+
     geom_abline(slope = 1)+
     theme_bw()+
     theme(legend.position = "none")+
-    #ggtitle("Displaying repeated measures")+
     facet_wrap(facets = vars(species), scales = "free")+
-    geom_smooth(method = "lm", formula = y ~ x, se = FALSE)+
+    geom_smooth(method = "lm", formula = y ~ x, se = TRUE)+
     stat_poly_eq(use_label(c("eq")), formula = y~x,label.y = 0.95)+
     stat_poly_eq(use_label(c("R2")), formula = y~x, label.y = 0.85)+
-    #stat_regline_equation(aes(x = AG_carbon_pYear, y = pred), label.x.npc = 0, label.y.npc = 1)+ # Adds equation
-    #stat_cor(aes(x = AG_carbon_pYear, y = pred), method = "pearson", label.x.npc = 0.1, label.y.npc = 0)+ # Adds R and P-value
     xlab(expression(paste("observed tree growth (kg C ", y^-1," ",ind^-1,")")))+
     ylab(expression(paste("predicted tree growth (kg C ", y^-1," ",ind^-1,")")))
-  
+
   p3 <- ggplot(data = df3)+
     geom_point(aes(x = log_AG_carbon_pYear, y = pred_log))+
     geom_abline(slope = 1)+
