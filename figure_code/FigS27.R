@@ -341,7 +341,7 @@ final_plot <- annotate_figure(
   bottom = textGrob(expression(paste("residual antecedent N deposition (kg N ", ha^-1," ",yr^-1,")")), gp = gpar(cex = 1.3))
 )
 
-ggsave(final_plot,filename = "./visualizations/final_figures/FigureS19.png",
+ggsave(final_plot,filename = "./visualizations/final_figures/FigureS27.png",
        device = "png", bg = "white", height = 12, width = 22, units = "in")
 
 

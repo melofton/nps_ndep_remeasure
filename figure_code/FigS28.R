@@ -309,6 +309,6 @@ p <- ggplot(data = plot_data)+
   ggh4x::facetted_pos_scales(x = facet_lims_lst)+
   scale_pattern_manual(values = c("none","circle"))
 
-ggsave(p,filename = "./visualizations/final_figures/FigureS20.png",
+ggsave(p,filename = "./visualizations/final_figures/FigureS28.png",
        device = "png", height = 3, width = 10, units = "in")
 

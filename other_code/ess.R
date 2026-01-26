@@ -49,4 +49,4 @@ for(i in 1:length(out)){
   
 }
 
-write.csv(final, "./experiments/ortho_log_t_interaction_adj_priors/ess_all.csv", row.names = FALSE)
+write.csv(final, "./experiments/ortho_log_t_interaction_01JAN26/ess_all.csv", row.names = FALSE)

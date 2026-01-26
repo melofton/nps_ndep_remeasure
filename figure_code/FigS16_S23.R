@@ -79,17 +79,20 @@ for(i in 1:length(spp)){
     group_by(species, params, labels) %>%
     summarize(mean_param_value = signif(mean(values, na.rm = TRUE), digits = 2))
   
-p1 <- ggplot(current_plot_dat, aes(x = .iteration, y = values, group = as.factor(.chain), color = as.factor(.chain)))+
-  geom_line()+
+p1 <- ggplot(current_plot_dat, aes(x = values))+
+  geom_density(fill = "gray")+
+  geom_vline(xintercept = 0, linetype = 2)+
   facet_wrap(facets = vars(labels), scales = "free",labeller = label_parsed)+
   theme_bw()+
   labs(color = NULL)+
-  xlab("iteration")+
-  ylab("parameter values")+
-  ggtitle(spp[i])
+  xlab("value")+
+  ggtitle(spp[i])+
+  theme(
+    plot.margin = unit(c(1,1.5,1,1), "cm") # Increased right margin to 2 cm
+  )
   
-  ggsave(p1,filename = paste0("./visualizations/final_figures/traceplots_all/",spp[i],".png"),
-         device = "png", bg = "white", height = 7, width = 9, units = "in")
+  ggsave(p1,filename = paste0("./visualizations/final_figures/histograms_all/",spp[i],".png"),
+         device = "png", bg = "white", height = 7, width = 12, units = "in")
   
   if(i == 1){
     param_sum <- param_sum_spp

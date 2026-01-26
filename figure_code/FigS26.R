@@ -13,7 +13,7 @@ library(scales)
 data = "./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv"
 
 # list files in each model output folder
-out <- list.files("./experiments/ortho_log_t_interaction_adj_priors",pattern = "mcmc.parquet",
+out <- list.files("./experiments/ortho_log_t_interaction_01JAN26",pattern = "mcmc.parquet",
                    full.names = TRUE)
 
 # read in and combine files
@@ -52,7 +52,7 @@ p1 <- ggplot(plot_dat, aes(x = .iteration, y = nu, group = as.factor(.chain), co
   xlab("iteration")+
   ylab(expression(paste(nu)))
   
-  ggsave(p1,filename = "./visualizations/final_figures/FigS18.png",
+  ggsave(p1,filename = "./visualizations/final_figures/FigureS26.png",
          device = "png", bg = "white", height = 7, width = 7.5, units = "in")
   
 
