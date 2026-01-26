@@ -247,7 +247,7 @@ model_output_folder = "./experiments/ortho_log_t_interaction_01JAN26"
   )
   
   p2 <- ggplot(data = df4, aes(x = AG_carbon_pYear, y = pred))+
-    geom_point()+
+    geom_point(alpha = 0.2)+
     geom_abline(slope = 1)+
     theme_bw()+
     theme(legend.position = "none")+
