@@ -252,7 +252,11 @@ plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregi
     labels = c("(-59.9)-(-50)","(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
                "(-9.9)-0","0.1-10","10.1-20","20.1-30","30.1-40"),
     right = TRUE # (0, 29] means up to and including 29
-  ))
+  )) %>%
+  mutate(syndrome = ifelse(species %in% c("Acer saccharum","Betula papyrifera"),1,
+                           ifelse(species %in% c("Liriodendron tulipifera","Prunus serotina"),2,
+                                  ifelse(species == "Pinus ponderosa",3,
+                                         ifelse(species %in% c("Populus deltoides","Populus tremuloides"),4,5)))))
 
 check <- plot_data %>%
   filter(is.na(bins))
@@ -293,13 +297,13 @@ for(j in 1:length(species_list)){
     filter(species == species_list[j] & ecoregion == most_n_eco) %>%
     arrange(pred)
   
-  ggplot(plot_dat, aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins))+
-    geom_point()+
-    scale_color_manual(values = color_hex_codes)
- 
-  
     plots[[l]] <- ggplot(data = plot_dat)+
       geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins), shape = 21)+
+      annotate("text",
+               x = Inf, y = Inf,
+               label = paste0("RS ",plot_dat$syndrome),
+               hjust = 1.2, vjust = 2,
+               size = 4, color = "black")+
       scale_color_manual(values = color_hex_codes)+
       scale_fill_manual(values = color_hex_codes)+
       facet_wrap(~facet_labels, scales = "free", labeller = label_parsed)+

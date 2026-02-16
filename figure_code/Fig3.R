@@ -208,7 +208,7 @@ fig3_b <- ggplot()+
   scale_linetype_manual(values = c(a_interval = 2, Dep_N = 2, Dep_Nhistoric = 1), name = NULL, labels = c("measurement interval \nstart/end date","current interval N dep.","antecedent N dep."))+
   scale_linewidth_manual(values = c("Dep_Ndiff" = 0.5), name = NULL, labels = c("short-term change in N dep."))+
   scale_shape_manual(values = c("annual N dep." = 16), name = NULL)+
-  xlab("")+
+  xlab("Study year")+
   ylab(expression(paste("N deposition (kg N ", ha^-1," ",y^-1,")")))+
   theme(legend.spacing.y = unit(0.0, "cm"),
         legend.key.width = unit(3, "line"),
@@ -295,7 +295,7 @@ fig3_b_2 <- ggplot()+
   scale_alpha_manual(values = c(date_m1 = 1, Dep_Nhistoric = 1), name = NULL, labels = c("measurement \ninterval start date","antecedent N dep."))+
   scale_linetype_manual(values = c(date_m1 = 2, Dep_Nhistoric = 1), name = NULL, labels = c("measurement \ninterval start date","antecedent N dep."))+
   scale_linewidth_manual(values = c("Dep_Ndiff" = 0.5), name = NULL, labels = c("short-term change in N dep."))+
-  xlab("")+
+  xlab("Study year")+
   ylab(expression(paste("N deposition (kg N ", ha^-1," ",y^-1,")")))+
   theme(legend.spacing.y = unit(0.0, "cm"),
         legend.key.width = unit(3, "line"),

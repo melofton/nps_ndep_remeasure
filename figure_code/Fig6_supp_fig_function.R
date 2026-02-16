@@ -243,6 +243,9 @@ most_n_ecos <- df1 %>%
   group_by(species) %>%
   filter(n_trees_ecoregion == max(n_trees_ecoregion)) %>%
   select(species, common_name, ecoregion_ortho) %>%
+  mutate(ecoregion_ortho = ifelse(species %in% c("Acer saccharum","Picea rubens"),"EASTERN TEMPERATE FORESTS",
+                                  ifelse(species == "Pinus ponderosa","NORTH AMERICAN DESERTS",
+                                         ifelse(species == "Populus deltoides","NORTHERN FORESTS",ecoregion_ortho)))) %>%
   rename(ecoregion = ecoregion_ortho)
 
 plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregion") ) %>%
@@ -250,8 +253,8 @@ plot_data <- left_join(final_pred_df, facet_label_df, by = c("species", "ecoregi
   right_join(., most_n_ecos, by = c("species", "ecoregion")) %>%
   mutate(bins = cut(
     pred,
-    breaks = seq(-60, 40, by = 10),
-    labels = c("(-59.9)-(-50)","(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
+    breaks = seq(-50, 40, by = 10),
+    labels = c("(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
                "(-9.9)-0","0.1-10","10.1-20","20.1-30","30.1-40"),
     right = TRUE # (0, 29] means up to and including 29
   ))
@@ -264,7 +267,7 @@ n_bins <- length(unique(plot_data$bins))
 
 # Get hex codes for n bins
 color_hex_codes <- colorRampPalette(c("#D5B60A","lightyellow","darkblue"))(n_bins) # Option "D" is default viridis
-names(color_hex_codes) <- c("(-59.9)-(-50)","(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
+names(color_hex_codes) <- c("(-49.9)-(-40)", "(-39.9)-(-30)", "(-29.9)-(-20)", "(-19.9)-(-10)",
                             "(-9.9)-0","0.1-10","10.1-20","20.1-30","30.1-40")
 show_col(color_hex_codes)
 color_hex_codes
@@ -283,22 +286,20 @@ for(j in 1:length(species_list)){
   most_n_eco <- df1 %>%
     filter(species == species_list[j]) %>%
     filter(n_trees_ecoregion == max(n_trees_ecoregion)) %>%
+    mutate(ecoregion_ortho = ifelse(species %in% c("Acer saccharum","Picea rubens"),"EASTERN TEMPERATE FORESTS",
+                                    ifelse(species == "Pinus ponderosa","NORTH AMERICAN DESERTS",
+                                           ifelse(species == "Populus deltoides","NORTHERN FORESTS",ecoregion_ortho)))) %>%
     pull(ecoregion_ortho)
   
   mean_growth_eco <- df1 %>%
     filter(species == species_list[j]) %>%
-    filter(n_trees_ecoregion == max(n_trees_ecoregion)) %>%
+    filter(ecoregion_ortho == most_n_eco) %>%
     pull(mean_perc_growth) %>%
     round(., 1)
   
   plot_dat <- plot_data %>%
     filter(species == species_list[j] & ecoregion == most_n_eco) %>%
     arrange(pred)
-  
-  ggplot(plot_dat, aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins))+
-    geom_point()+
-    scale_color_manual(values = color_hex_codes)
- 
   
     plots[[l]] <- ggplot(data = plot_dat)+
       geom_point(aes(x = N_ante_SO, y = N_rec_SO, fill = bins, color = bins), shape = 21)+

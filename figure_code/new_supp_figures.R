@@ -207,7 +207,7 @@ for(i in 1:length(spp_in_c1)){
     geom_sf(data = mean_fia_in_focal_c1, aes(color = Dep_Nhistoric_SO))+
     ylim(c(bbox_c1[2],bbox_c1[4]))+
     xlim(c(bbox_c1[1],bbox_c1[3]))+
-    ggtitle(paste0("c. Mean measurements:",year(date_range_mean_Ndep[1]),"-",year(date_range_mean_Ndep[2])))+
+    ggtitle(paste0("c. Mean measurements: ",year(date_range_mean_Ndep[1]),"-",year(date_range_mean_Ndep[2])))+
     ylab("")+
     xlab("")+
     scale_color_viridis(option = "A", name = expression(atop("residual \nantecedent \nN deposition ",(kg~N~ha^-1~yr^-1))), limits = ante_limits)+
@@ -231,7 +231,7 @@ for(i in 1:length(spp_in_c1)){
     geom_sf(data = mean_fia_in_focal_c1, aes(color = Dep_Nhistoric_SO))+
     ylim(c(bbox_c1[2],bbox_c1[4]))+
     xlim(c(bbox_c1[1],bbox_c1[3]))+
-    ggtitle(paste0("d. Mean measurements:",year(date_range_mean_Ndep[1]),"-",year(date_range_mean_Ndep[2])))+
+    ggtitle(paste0("d. Mean measurements: ",year(date_range_mean_Ndep[1]),"-",year(date_range_mean_Ndep[2])))+
     ylab("")+
     xlab("")+
     scale_color_viridis(option = "A", name = expression(atop("residual \nshort-term \nchange in \nN deposition ",(kg~N~ha^-1~yr^-1))), limits = st_limits)+
@@ -272,7 +272,7 @@ for(i in 1:length(spp_in_c1)){
     geom_sf(data = last_fia_in_focal_c1, aes(color = Dep_Nhistoric_SO))+
     ylim(c(bbox_c1[2],bbox_c1[4]))+
     xlim(c(bbox_c1[1],bbox_c1[3]))+
-    ggtitle(paste0("e. Recent measurements:",year(date_range_last_Ndep[1]),"-",year(date_range_last_Ndep[2])))+
+    ggtitle(paste0("e. Recent measurements: ",year(date_range_last_Ndep[1]),"-",year(date_range_last_Ndep[2])))+
     ylab("")+
     xlab("")+
     scale_color_viridis(option = "A", name = expression(atop("residual \nantecedent \nN deposition ",(kg~N~ha^-1~yr^-1))), limits = ante_limits)+
@@ -295,7 +295,7 @@ for(i in 1:length(spp_in_c1)){
     geom_sf(data = last_fia_in_focal_c1, aes(color = Dep_Nhistoric_SO))+
     ylim(c(bbox_c1[2],bbox_c1[4]))+
     xlim(c(bbox_c1[1],bbox_c1[3]))+
-    ggtitle(paste0("f. Recent measurements:",year(date_range_last_Ndep[1]),"-",year(date_range_last_Ndep[2])))+
+    ggtitle(paste0("f. Recent measurements: ",year(date_range_last_Ndep[1]),"-",year(date_range_last_Ndep[2])))+
     ylab("")+
     scale_color_viridis(option = "A", name = expression(atop("residual \nshort-term \nchange in \nN deposition ",(kg~N~ha^-1~yr^-1))), limits = st_limits)+
     theme(panel.border = element_rect(fill = NA, color = "lightgreen", linewidth = 2, linetype = "solid"),

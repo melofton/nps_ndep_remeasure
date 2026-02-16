@@ -231,7 +231,7 @@ for(i in 1:length(ecoregions)){
   
 }
 
-#### Figure 4
+#### Data wrangling
 
 # get predictions for most common ecoregion
 letters_df <- data.frame(species = sort(unique(final_pred_df$species)),
@@ -292,6 +292,8 @@ for(i in 1:length(spp)){
 plot_data <- left_join(final_pred, facet_label_df, by = c("species", "ecoregion") ) %>%
   arrange(species)
 
+#### Figure 4
+
 p <- ggplot(data = plot_data)+
   ggpattern::geom_density_pattern(aes(x = pred, group = change_type, pattern = change_type, fill = change_type),
                                   color = "black", pattern_color = "white")+
@@ -335,27 +337,25 @@ plot_data5 <- plot_data %>%
   group_by(species, change_type, ecoregion, draw) %>%
   pivot_wider(names_from = change_type, values_from = pred) %>%
   ungroup() %>%
-  select(-draw) 
+  select(-draw) %>%
+  mutate(species = factor(species, levels = c("Liriodendron tulipifera","Populus deltoides","Prunus serotina","Acer saccharum","Betula papyrifera","Picea rubens","Populus tremuloides","Pinus ponderosa")))
 
 my.cols.og <- hue_pal()(3)
 my.cols.og
-my.cols <- c(NA,"#F8766D","#faa49e","#fdd1ce",NA,"#008729","#00BA38","#00fa4b","#7affa2",NA,"#619CFF")
+my.cols <- c("#F8766D","#faa49e","#fdd1ce","#008729","#00BA38","#00fa4b","#7affa2","#619CFF")
 
 spp_eco <- plot_data2 %>%
   select(ecoregion, species, spp_abbrevs) %>%
   arrange(ecoregion) %>%
   distinct(.)
-cols <- data.frame(species = c(spp_eco$species,NA,NA,NA),
-                   legend_var = c(spp_eco$species,unique(spp_eco$ecoregion))) 
-lev <- cols$legend_var
-plot_data3 <- full_join(plot_data2, cols, by = "species") %>%
-  mutate(legend_var = factor(legend_var, levels = c(lev[9],lev[1],lev[2],lev[3],lev[10],lev[4],lev[5],lev[6],lev[7],lev[11],lev[8]))) %>%
+
+plot_data3 <- plot_data2 %>%
   mutate(antecedent_lab = ifelse(spp_abbrevs %in% c("Potr","Bepa"),antecedent + 0.4,
                              ifelse(spp_abbrevs == "Acsa",antecedent + 0.4, antecedent))) %>%
   mutate(`short-term_lab` = ifelse(spp_abbrevs %in% c("Potr","Bepa"),`short-term` + 0.4,
-                             ifelse(spp_abbrevs == "Acsa",`short-term` - 0.4, `short-term`)))
-plot_data6 <- full_join(plot_data5, cols, by = "species") %>%
-  mutate(legend_var = factor(legend_var, levels = c(lev[9],lev[1],lev[2],lev[3],lev[10],lev[4],lev[5],lev[6],lev[7],lev[11],lev[8])))
+                             ifelse(spp_abbrevs == "Acsa",`short-term` - 0.4, `short-term`))) %>%
+  mutate(species = factor(species, levels = c("Liriodendron tulipifera","Populus deltoides","Prunus serotina","Acer saccharum","Betula papyrifera","Picea rubens","Populus tremuloides","Pinus ponderosa")))
+
 
 seg_dat <- plot_data3 %>%
   filter(spp_abbrevs %in% c("Acsa","Bepa","Potr"))
@@ -363,9 +363,9 @@ seg_dat <- plot_data3 %>%
 fig5 <- ggplot()+
   geom_hline(yintercept = 0)+
   geom_vline(xintercept = 0)+
-  geom_point(data = plot_data6, aes(x = antecedent, y = `short-term`, group = species, color = legend_var), size = 0.5, alpha = 0.5)+
+  geom_point(data = plot_data5, aes(x = antecedent, y = `short-term`, group = species, color = species), size = 0.5, alpha = 0.5)+
   geom_segment(data = seg_dat, aes(x = antecedent_lab, y = `short-term_lab`, xend = antecedent, yend = `short-term`))+
-  geom_label(data = plot_data3, aes(x = antecedent_lab, y = `short-term_lab`, group = species, label = spp_abbrevs, fill = legend_var))+
+  geom_label(data = plot_data3, aes(x = antecedent_lab, y = `short-term_lab`, group = species, label = spp_abbrevs, fill = species))+
   #xlim(c(-0.4, 0.4))+
   #ylim(c(-0.4, 0.4))+
   theme_classic()+
@@ -410,13 +410,13 @@ fig5 <- ggplot()+
     fontface = 2
   )+
   scale_y_continuous(breaks = breaks_width(1))+
-  scale_fill_manual(name = "Ecoregion",
+  scale_fill_manual(name = "",
                       labels = function(x) str_wrap(x, width = 30),
                     values = my.cols)+
-  scale_color_manual(name = "Ecoregion",
+  scale_color_manual(name = "",
                       labels = function(x) str_wrap(x, width = 30),
                      values = my.cols)+
-  guides(color = guide_legend(override.aes = list(shape = c(NA,16,16,16,NA,16,16,16,16,NA,16),
+  guides(color = guide_legend(override.aes = list(shape = c(16,16,16,16,16,16,16,16),
                                                   size = 3)),
          fill = "none")
 
