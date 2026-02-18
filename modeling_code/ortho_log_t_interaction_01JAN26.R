@@ -29,17 +29,17 @@ run_model <- function(k, df, sim){
            log_subp_BA_GT_m1 = log(subp_BA_GT_m1 + 1)) #|>
     #slice(c(1:100))
   
-  log_mean_annual_avg_growth <- df1$log_AG_carbon_pYear
-  log_start_measures <- df1$log_AG_carbon_m1
-  plot_index <- df1$plot_index
-  tree_index <- df1$tree_index
-  log_ba_gt <- df1$log_subp_BA_GT_m1
-  sdep_historic <- df1$Dep_Shistoric
-  sdep_diff <- df1$Dep_Sdiff
-  mat_delta <- df1$MAT_delta
-  map_delta_dm <- df1$MAP_delta_dm
-  ndep_historic <- df1$Dep_Nhistoric_ortho
-  ndep_diff <- df1$Dep_Ndiff_ortho
+  log_mean_annual_avg_growth <- c(df1$log_AG_carbon_pYear)
+  log_start_measures <- c(df1$log_AG_carbon_m1)
+  plot_index <- c(df1$plot_index)
+  tree_index <- c(df1$tree_index)
+  log_ba_gt <- c(df1$log_subp_BA_GT_m1)
+  sdep_historic <- c(df1$Dep_Shistoric)
+  sdep_diff <- c(df1$Dep_Sdiff)
+  mat_delta <- c(df1$MAT_delta)
+  map_delta_dm <- c(df1$MAP_delta_dm)
+  ndep_historic <- c(df1$Dep_Nhistoric_ortho)
+  ndep_diff <- c(df1$Dep_Ndiff_ortho)
   
   n_measures <- nrow(df1)
 

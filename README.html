@@ -352,11 +352,12 @@ display: none;
 </div>
 
 
-<div id="draft-code-repository-for-lofton-et-al.-2026-insert-submitted-manuscript-title-here" class="section level1">
-<h1>DRAFT Code repository for Lofton et al. 2026, “INSERT SUBMITTED
-MANUSCRIPT TITLE HERE”</h1>
-<p>Mary E. Lofton<sup>1</sup>, Michael Schwob<sup>2</sup>, Michael
-Bell<sup>3</sup>, Christopher Clark<sup>4</sup>, Emmi
+<div id="code-repository-for-lofton-et-al.-2026-contrasting-effects-of-short--versus-long-term-responses-to-nitrogen-deposition-in-u.s.-tree-species" class="section level1">
+<h1>Code repository for Lofton et al. 2026, “Contrasting effects of
+short- versus long-term responses to nitrogen deposition in U.S. tree
+species”</h1>
+<p>Mary E. Lofton<sup>1</sup>, Michael R. Schwob<sup>2</sup>, Michael D.
+Bell<sup>3</sup>, Christopher M. Clark<sup>4</sup>, Emmi
 Felker-Quinn<sup>3</sup>, Todd McDonnell<sup>5</sup>, R. Quinn
 Thomas<sup>1</sup></p>
 <p><em><sup>1</sup>Center for Ecosystem Forecasting, Virginia Tech,
@@ -368,12 +369,14 @@ and Development, Washington DC, USA</em><br> <em><sup>5</sup>E&amp;S
 Environmental, Corvallis, OR, USA</em></p>
 <div id="accessing-data-associated-with-this-repository" class="section level3">
 <h3>Accessing data associated with this repository:</h3>
-<p>This section will be developed once we discuss a data publication
-plan with co-authors.</p>
+<p>Data associated with this manuscript are published in the Zenodo
+repository:</p>
+<p>[INSERT ZENODO CITATION AND DOI HERE]</p>
 </div>
 <div id="guide-to-files-and-folders" class="section level3">
 <h3>Guide to files and folders:</h3>
-<p><strong>data</strong>: contains all data used for project</p>
+<p><strong>data</strong>: contains all data used for the
+project<sup>a</sup></p>
 <p><strong>experiments</strong>: contains results from modeling
 experiments, including model txt files, model output as parquet files,
 and default model output visualizations</p>
@@ -388,6 +391,14 @@ figures for presentations</p>
 <p><strong>visualizations</strong>: all visualizations other than the
 default model output visualizations housed in the <em>experiments</em>
 folder</p>
+<p><sup>a</sup><em>the raw data is not provided in this code repository
+because it is too big to upload to GitHub; see the McDonnell et
+al. Zenodo publication to access the raw data. If you wish to work with
+the processed data (e.g., orthogonalized N deposition values) used as
+model inputs for this project but do not wish to run any models or
+generate any figures, you can run the
+<code>modeling_code/generate_processed_data.R</code> in this
+repository.</em></p>
 </div>
 <div id="guide-for-reviewers" class="section level3">
 <h3>Guide for reviewers:</h3>
@@ -407,14 +418,20 @@ to generate the final figures for the manuscript, and do an example run
 of the Bayesian hierarchical model for 100 individuals of <em>Prunus
 serotina</em>.</li>
 <li>Complete all analyses and generate final figures in the manuscript
-using the scripts in the <code>figure_code</code> file. Specifically, to
-generate the manuscript figure, run:
+using the scripts in the <code>figure_code</code> folder. The scripts in
+this folder will use the <code>processed_data.csv</code> that you
+generated in Step 2 as well as the actual model output used in the
+manuscript from the <code>ortho_log_t_interaction_01JAN26</code> folder.
+Specifically, to generate the manuscript figures (as opposed to
+supplemental figures), run:
 <ol style="list-style-type: lower-alpha">
 <li><code>Fig1.R</code></li>
 <li><code>Fig2.R</code></li>
 <li><code>Fig3.R</code></li>
 <li><code>Fig4.R</code></li>
 <li><code>Fig5.R</code></li>
+<li><code>Fig6.R</code></li>
+<li><code>Fig7.R</code></li>
 </ol></li>
 </ol>
 </div>
@@ -425,7 +442,9 @@ Service.</p>
 </div>
 <div id="disclaimer-text" class="section level4">
 <h4>Disclaimer text</h4>
-<p>Is there anything here that is needed?</p>
+<p>The views expressed here are those of the authors and do not
+necessarily represent the views or policies of the U.S. Environmental
+Protection Agency or any other federal agency.</p>
 </div>
 </div>
 </div>
