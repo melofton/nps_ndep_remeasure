@@ -9,7 +9,7 @@
 install.packages(c("tidyverse", "lubridate", "rjags", "tidybayes", "bayesplot",
                    "furrr", "sf", "viridis", "ggthemes", "ggpubr", "rnaturalearth",
                    "scales", "arrow", "stringr", "metR", "grid", "alphahull",
-                   "ggh4x","ggpattern","ggpmisc"))
+                   "ggh4x","ggpattern","ggpmisc","zen4R"))
 
 # load packages
 library(tidyverse)
@@ -32,3 +32,4 @@ library(alphahull)
 library(ggh4x)
 library(ggpattern)
 library(ggpmisc)
+library(zen4R)

@@ -369,17 +369,27 @@ and Development, Washington DC, USA</em><br> <em><sup>5</sup>E&amp;S
 Environmental, Corvallis, OR, USA</em></p>
 <div id="accessing-data-associated-with-this-repository" class="section level3">
 <h3>Accessing data associated with this repository:</h3>
-<p>Data associated with this manuscript are published in the Zenodo
-repository:</p>
-<p>[INSERT ZENODO CITATION AND DOI HERE]</p>
+<p><strong>Due to GitHub file size limitations, data associated with
+this manuscript are published in the Zenodo repository:</strong></p>
+<p><em>McDonnell, T. (2026). Tree aboveground biomass, basal area,
+atmospheric deposition, soil, and climate data for sugar maple (Acer
+saccharum), paper birch (Betula papyrifera), tuliptree (Liriodendron
+tulipifera), red spruce (Picea rubens), ponderosa pine (Pinus
+ponderosa), cottonwood (Populus deltoides), quaking aspen (Populus
+tremuloides), and black cherry (Prunus serotina) measured in United
+States Department of Agriculture Forest Inventory Analysis plots from
+1997-2022. [Data set]. Zenodo.</em> <a href="https://doi.org/10.5281/zenodo.18701698"><img role="img" aria-label="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18701698.svg" alt="DOI" /></a></p>
+<p>Run the <code>download_data.R</code> script to access and download
+the data onto your local computer for use with other repository
+files.</p>
 </div>
 <div id="guide-to-files-and-folders" class="section level3">
 <h3>Guide to files and folders:</h3>
 <p><strong>data</strong>: contains all data used for the
 project<sup>a</sup></p>
 <p><strong>experiments</strong>: contains results from modeling
-experiments, including model txt files, model output as parquet files,
-and default model output visualizations</p>
+experiments, including JAGS model .txt files, model output as parquet
+files, and default model output visualizations</p>
 <p><strong>figure_code</strong>: code used to generate figures used
 either in the main manuscript or the supplement</p>
 <p><strong>install.R</strong>: R code to install and load packages
@@ -389,16 +399,18 @@ modeling experiments</p>
 <p><strong>other_code</strong>: code used, e.g., for data exploration or
 figures for presentations</p>
 <p><strong>visualizations</strong>: all visualizations other than the
-default model output visualizations housed in the <em>experiments</em>
-folder</p>
-<p><sup>a</sup><em>the raw data is not provided in this code repository
-because it is too big to upload to GitHub; see the McDonnell et
-al. Zenodo publication to access the raw data. If you wish to work with
-the processed data (e.g., orthogonalized N deposition values) used as
-model inputs for this project but do not wish to run any models or
-generate any figures, you can run the
-<code>modeling_code/generate_processed_data.R</code> in this
-repository.</em></p>
+default model output visualizations housed in the
+<code>./experiments/</code> folder</p>
+<p><sup>a</sup><em>The raw data is not provided in this code repository
+because it is too big to upload to GitHub; see the McDonnell (2026)
+Zenodo publication (<a href="https://doi.org/10.5281/zenodo.18701697" class="uri">https://doi.org/10.5281/zenodo.18701697</a>) to access the
+raw data. If you wish to work with the processed data (e.g.,
+orthogonalized N deposition values) used as model inputs for this
+project but do not wish to run any models or generate any figures, you
+can run: 1) the <code>download_data.R</code> script to download the raw
+data onto your local computer; then 2) the
+<code>modeling_code/generate_processed_data.R</code> in this repository
+to generate processed data from the raw data.</em></p>
 </div>
 <div id="guide-for-reviewers" class="section level3">
 <h3>Guide for reviewers:</h3>
@@ -407,6 +419,14 @@ repository.</em></p>
 <ol style="list-style-type: decimal">
 <li>Run <code>install.R</code> to be sure you have the necessary
 libraries loaded.</li>
+<li>Run <code>download_data.R</code> to download the raw data from
+Zenodo onto your computer. If you are working in an RProject or have set
+your working directory to be the directory containing all files
+associated with this repository, the data will automatically be
+downloaded into the <code>./data/</code> subdirectory. Otherwise, you
+will need to move the data into this subdirectory after download. Be
+sure to adjust the download directory as appropriate for your
+computer.</li>
 <li>Because the Bayesian hierarchical models are compute-intensive (we
 used a high-performance cluster to complete model runs for the
 manuscript), we recommend to run the example model for 100 individuals
@@ -438,7 +458,7 @@ supplemental figures), run:
 <div id="funding" class="section level4">
 <h4>Funding</h4>
 <p>Funding for this project was provided by the U.S. National Park
-Service.</p>
+Service (task agreement P23AC01502).</p>
 </div>
 <div id="disclaimer-text" class="section level4">
 <h4>Disclaimer text</h4>

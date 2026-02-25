@@ -425,6 +425,9 @@ fig5
 ggsave(fig5,filename = "./visualizations/final_figures/Figure5.png",
        device = "png", height = 7, width = 9, units = "in")
 
+ggsave(fig5,filename = "./visualizations/final_figures/Figure5_graphicalAbstract.png",
+       device = "png", height = 4.5, width = 8, units = "in")
+
 #### END OF CODE FOR FINAL FIGURE INCLUDED IN MANUSCRIPT
 
 
