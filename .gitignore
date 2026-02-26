@@ -55,3 +55,12 @@ McDonnell*
 *treeEffect.parquet
 processed_data.csv
 data/Ndep_data_single_point.gdb
+visualizations/other_visualizations
+# Ignore everything in the specific folder
+/visualizations/final_figures/*
+
+# But don't ignore the parent directory itself (this is crucial for Git to look inside)
+!/visualizations/final_figures
+
+# And explicitly include the single file you want to keep
+!/visualizations/final_figures/README.md
