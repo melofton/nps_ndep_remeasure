@@ -9,7 +9,9 @@
 install.packages(c("tidyverse", "lubridate", "rjags", "tidybayes", "bayesplot",
                    "furrr", "sf", "viridis", "ggthemes", "ggpubr", "rnaturalearth",
                    "scales", "arrow", "stringr", "metR", "grid", "alphahull",
-                   "ggh4x","ggpattern","ggpmisc","zen4R"))
+                   "ggh4x","ggpattern","ggpmisc","zen4R","ggspatial","maps"))
+remotes::install_github("ropensci/rnaturalearthhires")
+
 
 # load packages
 library(tidyverse)
@@ -33,3 +35,6 @@ library(ggh4x)
 library(ggpattern)
 library(ggpmisc)
 library(zen4R)
+library(rnaturalearthhires)
+library(ggspatial)
+library(maps)

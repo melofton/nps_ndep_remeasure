@@ -17,6 +17,7 @@ library(ggthemes)
 library(ggpubr)
 library(rnaturalearth)
 library(grid)
+library(ggspatial)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
   dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
@@ -31,6 +32,22 @@ spp_df <- og_df %>%
   distinct(.)
 
 #'A. map of mean N deposition during measurement period (including 15 yr prior to 1st measure)
+
+# Set the path to your downloaded and unzipped shapefile
+shapefile_path <- "./data/na_cec_eco_L1/NA_CEC_Eco_Level1.shp"
+
+# Read the shapefile into R
+na_ecoregions <- st_read(shapefile_path)
+
+# Filter for the United States ecoregions.
+# The 'COUNTRY' or 'NA_L1_CODE' column can be used for filtering.
+# We will combine US ecoregions by using the 'NA_L1_CODE' column, which uniquely identifies each Level I ecoregion across North America.
+us_ecoregions <- na_ecoregions %>%
+  filter(grepl("United States", NA_L1NAME) ) # A quick filter, adjust as needed
+
+us_boundaries <- ne_states(country = "United States of America", returnclass = "sf") %>%
+  filter(!iso_3166_2 %in% c( "US-AK", "US-HI"))
+crs_us <- st_crs(us_boundaries)
 
 usa_coordinates <- map_data("state")
 map_data_ante <- left_join(df, spp_df, by = "common_name") %>%
@@ -56,6 +73,12 @@ map_data <- left_join(df, spp_df, by = "common_name") %>%
   mutate(Dep_Nmean = (Dep_Nante + Dep_Ncumall) / (dt_all + 15)) %>%
   select(plot_ID, lat, lon, Dep_Nmean)
 
+map_data_sf <- st_as_sf(
+  map_data,
+  coords = c("lon", "lat"),
+  crs = crs_us
+)
+
 plot <- df %>%
   filter(level1_ecoregion == "EASTERN TEMPERATE FORESTS" & num_intervals == 4) %>%
   select(plot_ID, Dep_Nhistoric, Dep_N, date_m1, date_m2, interval_no, lat, lon) %>%
@@ -68,24 +91,20 @@ plot_data <- df %>%
   filter(plot_ID == plot) %>%
   distinct()
 
+plot_data_sf <- st_as_sf(
+  plot_data,
+  coords = c("lon", "lat"),
+  crs = crs_us
+)
+
 segment_df <- plot_data[1,] %>%
   mutate(lat_start = lat - 5, lon_start = lon + 5, lon = lon + 0.35, lat = lat - 0.35)
   
 fig3_a <- ggplot() +
-  geom_map(
-    data = usa_coordinates, map = usa_coordinates,
-    aes(long, lat, map_id = region),
-    color = "black", fill = "white")+
-  geom_point(
-    data = map_data,
-    aes(lon, lat, color = Dep_Nmean),
-    shape = 16, alpha = 1, size = 1
-  ) +
-  geom_point(
-    data = plot_data,
-    aes(lon, lat),
-    shape = 0, size = 2, stroke = 2
-  ) +
+  geom_sf(data = us_boundaries, color = "black", linewidth = 0.1, fill = "white") +
+  geom_sf(data = map_data_sf, aes(color = Dep_Nmean),
+          shape = 16, alpha = 1, size = 1)+
+  geom_sf(data = plot_data_sf, shape = 0, size = 2, stroke = 2)+
   geom_segment(
     data = segment_df,
     aes(x = lon_start, y = lat_start, xend = lon, yend = lat),
@@ -93,22 +112,32 @@ fig3_a <- ggplot() +
   ) +
   annotate("text", x = segment_df$lon_start, y = segment_df$lat_start - 1.2, label = "plot location \nused in (b)") +
   scale_color_viridis(option = "H")+
-  xlab("")+
-  ylab("")+
-  theme_classic()+
+  theme_bw()+
   labs(color = expression(paste("mean N deposition (kg N ", ha^-1," ",y^-1,")")))+
   guides(color = guide_colorbar(title.position = "bottom", title.hjust = 0.0))+
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        axis.line.x = element_blank(),
-        axis.line.y = element_blank(),
-        legend.background = element_rect(fill = "transparent"))+
-  theme(legend.position = "inside", legend.position.inside =  c(0.2, 0.15),
-        legend.direction = "horizontal", plot.margin = unit(c(0.1,0,0.1,0), "pt"))+
-  ylim(c(min(usa_coordinates$lat),max(usa_coordinates$lat)))
-
+  theme(axis.title = element_blank(),
+        panel.grid = element_blank(),
+        legend.background = element_rect(fill = "transparent"),
+        legend.position = "inside", legend.position.inside =  c(0.2, 0.15),
+        legend.direction = "horizontal", plot.margin = unit(c(0.1,0,0.1,0), "pt"),
+        plot.title = element_text(face = "bold"))+
+  annotation_north_arrow(
+    location = "br",  # "bl" for bottom left (other options: "tl", "tr", "br")
+    which_north = "grid", # "true" or "grid"
+    pad_x = unit(0.3, "in"), # padding from x-axis edge
+    pad_y = unit(0.1, "in"), # padding from y-axis edge
+    style = north_arrow_minimal, # or north_arrow_minimal(), north_arrow_classic(), etc.
+    height = unit(0.3, "in"),
+    width = unit(0.3, "in")
+  )+
+  annotation_scale(
+    location = "br",        # Location: "bl" for bottom left (other options: "tl", "br", "tr")
+    width_hint = 0.1,       # Suggested proportion of plot area for the scale bar
+    pad_x = unit(0.1, "in"), # Distance from x-axis edge
+    pad_y = unit(0.5, "in"), # Distance from y-axis edge
+    bar_cols = c("black", "white") # Colors for the scale bar segments
+  )+
+  ggtitle("(a)")
 
 fig3_a
 
@@ -212,7 +241,8 @@ fig3_b <- ggplot()+
   ylab(expression(paste("N deposition (kg N ", ha^-1," ",y^-1,")")))+
   theme(legend.spacing.y = unit(0.0, "cm"),
         legend.key.width = unit(3, "line"),
-        legend.key.height = unit(1.5, "line"))+
+        legend.key.height = unit(1.5, "line"),
+        plot.title = element_text(face = "bold"))+
   guides(
     color = guide_legend(order = 1,
                          override.aes = list(
@@ -228,7 +258,8 @@ fig3_b <- ggplot()+
       alpha = c(1, 1, 1) # Example values
     ), reverse = TRUE),
     linewidth = guide_legend(order = 4)
-  )
+  )+
+  ggtitle("(b)")
 
 fig3_b
 
@@ -238,12 +269,10 @@ ggsave(plot = fig3_b, filename = "./visualizations/final_figures/Figure3b.tif",
 # Assemble figure
 
 p2 <- ggarrange(fig3_a, fig3_b,
-                nrow = 2, ncol = 1,
-                labels = c("(a)","(b)")
-)
+                nrow = 2, ncol = 1)
 p2
 ggsave(plot = p2, filename = "./visualizations/final_figures/Figure3.tif",
-       device = "tiff", height = 8, width = 7.5, units = "in", bg = "white")
+       device = "tiff", height = 8.5, width = 7.5, units = "in", bg = "white")
 
 #### END OF CODE FOR FINAL FIGURE INCLUDED IN MANUSCRIPT
 

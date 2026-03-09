@@ -18,6 +18,7 @@ library(ggthemes)
 library(ggpubr)
 library(rnaturalearth)
 library(scales)
+library(ggspatial)
 
 og_df <- read_csv("./data/McDonnell_etal_InPrep_TreeData_2024_10_11.csv", show_col_types = FALSE) %>%
   dplyr::filter(!common_name %in% c("Douglas-fir","western hemlock")) 
@@ -66,13 +67,29 @@ fig2_a <- ggplot() +
   ) +
   
   # Remove the gridlines and axis text for a cleaner map
-  theme_minimal() +
+  theme_bw() +
   theme(
-    axis.text = element_blank(),
+    #axis.text = element_blank(),
     axis.title = element_blank(),
     panel.grid = element_blank()
+  )+
+  annotation_north_arrow(
+    location = "bl",  # "bl" for bottom left (other options: "tl", "tr", "br")
+    which_north = "grid", # "true" or "grid"
+    pad_x = unit(0.1, "in"), # padding from x-axis edge
+    pad_y = unit(0.1, "in"), # padding from y-axis edge
+    style = north_arrow_minimal, # or north_arrow_minimal(), north_arrow_classic(), etc.
+    height = unit(0.3, "in"),
+    width = unit(0.3, "in")
+  )+
+  annotation_scale(
+    location = "bl",        # Location: "bl" for bottom left (other options: "tl", "br", "tr")
+    width_hint = 0.3,       # Suggested proportion of plot area for the scale bar
+    pad_x = unit(0.5, "in"), # Distance from x-axis edge
+    pad_y = unit(0.1, "in"), # Distance from y-axis edge
+    bar_cols = c("black", "white") # Colors for the scale bar segments
   )
-
+fig2_a
 # B. number of remeasurements by species
 
 dat_b <- df %>%
