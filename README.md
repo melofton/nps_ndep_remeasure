@@ -11,7 +11,7 @@ Mary E. Lofton<sup>1</sup>, Michael R. Schwob<sup>2</sup>, Michael D. Bell<sup>3
 **Due to GitHub file size limitations, data associated with this manuscript are published in the Zenodo repository:**
 
 *McDonnell, T. (2026). Tree aboveground biomass, basal area, atmospheric deposition, soil, and climate data for sugar maple (Acer saccharum), paper birch (Betula papyrifera), tuliptree (Liriodendron tulipifera), red spruce (Picea rubens), ponderosa pine (Pinus ponderosa), cottonwood (Populus deltoides), quaking aspen (Populus tremuloides), and black cherry (Prunus serotina) measured in United States Department of Agriculture Forest Inventory Analysis plots from 1997-2022. [Data set]. Zenodo.*
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18701698.svg)](https://doi.org/10.5281/zenodo.18701698)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18927746.svg)](https://doi.org/10.5281/zenodo.18927746)
 
 Run the `download_data.R` script to access and download the data onto your local computer for use with other repository files.
 
@@ -31,7 +31,7 @@ Run the `download_data.R` script to access and download the data onto your local
 
 **visualizations**: all visualizations other than the default model output visualizations housed in the `./experiments/` folder
 
-<sup>a</sup>*The raw data is not provided in this code repository because it is too big to upload to GitHub; see the McDonnell (2026) Zenodo publication (https://doi.org/10.5281/zenodo.18701697) to access the raw data. If you wish to work with the processed data (e.g., orthogonalized N deposition values) used as model inputs for this project but do not wish to run any models or generate any figures, you can run: 1) the `download_data.R` script to download the raw data onto your local computer; then 2) the `modeling_code/generate_processed_data.R` in this repository to generate processed data from the raw data.*
+<sup>a</sup>*The raw data is not provided in this code repository because it is too big to upload to GitHub; see the McDonnell (2026) Zenodo publication (https://doi.org/10.5281/zenodo.18927746) to access the raw data. If you wish to work with the processed data (e.g., orthogonalized N deposition values) used as model inputs for this project but do not wish to run any models or generate any figures, you can run: 1) the `download_data.R` script to download the raw data onto your local computer; then 2) the `modeling_code/generate_processed_data.R` in this repository to generate processed data from the raw data.*
 
 ### Guide for reviewers:
 

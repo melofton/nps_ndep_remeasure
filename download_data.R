@@ -2,7 +2,7 @@
 # Author: Mary Lofton
 # Date: 25FEB26
 
-# Purpose: Download data from McDonnell (2026): https://doi.org/10.5281/zenodo.18701698
+# Purpose: Download data from McDonnell (2026): https://doi.org/10.5281/zenodo.18927746
 
 # Note: The total file size for download is large (473.8 MB) and may take a few minutes
 # depending on your internet speed. You can increase the 'timeout' argument in the 
@@ -11,5 +11,5 @@
 
 library(zen4R)
 
-doi <- "10.5281/zenodo.18701698"
+doi <- "10.5281/zenodo.18927746"
 download_zenodo(doi = doi, path = "./data/", timeout = 600) 
